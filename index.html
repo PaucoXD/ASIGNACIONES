@@ -122,6 +122,10 @@ input.sb { border-color: color-mix(in srgb, var(--danger) 45%, var(--line)); }
 .boton:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
 h2.sec-t { color: #2c6e7c; } h2.sec-s { color: #a87a00; } h2.sec-n { color: #b8483a; }
 #p-out { cursor: zoom-in; }
+.wol { display: grid; gap: 10px; padding: 12px; border-radius: 10px; background: var(--bg); }
+.pasos { margin: 0; padding-left: 1.3em; display: grid; gap: 4px; font-size: .92rem; }
+.pasos a { color: var(--accent); font-weight: 600; }
+textarea { font: inherit; color: var(--fg); background: var(--surface); border: 1px solid var(--line); border-radius: 9px; padding: 9px 11px; width: 100%; resize: vertical; }
 .tabs { display: flex; gap: 6px; margin-top: 14px; overflow-x: auto; padding-bottom: 2px; }
 .tabs button { flex: 0 0 auto; border-radius: 999px; padding: 8px 16px; }
 .tabs button[aria-selected="true"] { background: var(--fg); color: var(--bg); border-color: var(--fg); }
@@ -204,6 +208,18 @@ h2.sec-t { color: #2c6e7c; } h2.sec-s { color: #a87a00; } h2.sec-n { color: #b84
 
 <div class="wrap tab" id="tab-vym" role="tabpanel" hidden>
   <div class="panel">
+    <div class="wol">
+      <h2>Partes de la semana</h2>
+      <ol class="pasos">
+        <li><a id="v-wol" href="https://wol.jw.org/es/wol/meetings/r4/lp-s" target="_blank" rel="noopener">Abre la semana en wol.jw.org</a></li>
+        <li>Mantén presionado el texto, elige <b>Seleccionar todo</b> y <b>Copiar</b>.</li>
+        <li>Pégalo aquí abajo y toca <b>Llenar partes</b>.</li>
+      </ol>
+      <textarea id="v-pegar" rows="4" placeholder="Pega aquí el programa de la semana"></textarea>
+      <button type="button" class="primary" id="v-llenar">Llenar partes</button>
+      <p class="toast" id="v-pegar-msg" role="status"></p>
+    </div>
+
     <h2>Semana</h2>
     <div class="grid2">
       <label class="f">Fecha de la reunión<input id="v-fecha" type="date"></label>
@@ -307,7 +323,7 @@ h2.sec-t { color: #2c6e7c; } h2.sec-s { color: #a87a00; } h2.sec-n { color: #b84
 <script>
 // Cambia este número en cada actualización. En GitHub Pages, si el teléfono
 // tiene guardada una versión vieja, la página se recarga sola con la nueva.
-const APP_VERSION = "6";
+const APP_VERSION = "7";
 (function buscarVersionNueva() {
   if (!/github\.io$/.test(location.hostname)) return;
   fetch(location.pathname + "?nocache=" + Date.now(), { cache: "no-store" })
@@ -855,7 +871,7 @@ let vImg = null;
 
 function vGuardar() { try { localStorage.setItem("vym-state", JSON.stringify(vs)); } catch { const c = { ...vs, img: "" }; store.set("vym-state", c); } }
 let vt;
-function vCambio() { vGuardar(); clearTimeout(vt); vt = setTimeout(vDibujar, 120); }
+function vCambio() { vGuardar(); vEnlaceWol(); clearTimeout(vt); vt = setTimeout(vDibujar, 120); }
 
 function vListas() {
   const smm = $("v-smm");
@@ -915,6 +931,72 @@ function vCargarImg() {
   if (!vs.img) { vImg = null; return; }
   const im = new Image(); im.onload = () => { vImg = im; vDibujar(); }; im.src = vs.img;
 }
+
+// ---------- Leer el programa copiado de wol.jw.org ----------
+function semanaISO(iso) {
+  const d = dLocal(iso); d.setDate(d.getDate() + 3 - ((d.getDay() + 6) % 7)); // jueves de esa semana
+  const y = d.getFullYear(), ene4 = new Date(y, 0, 4);
+  const w = 1 + Math.round(((d - ene4) / 86400000 - 3 + ((ene4.getDay() + 6) % 7)) / 7);
+  return { y, w };
+}
+function vEnlaceWol() {
+  const f = vs.f.fecha;
+  $("v-wol").href = f ? (({ y, w }) => `https://wol.jw.org/es/wol/meetings/r4/lp-s/${y}/${w}`)(semanaISO(f)) : "https://wol.jw.org/es/wol/meetings/r4/lp-s";
+}
+const sinAcento = t => t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
+function leerPrograma(texto) {
+  const lineas = texto.split(/\r?\n/).map(l => l.replace(/\s+/g, " ").trim()).filter(Boolean);
+  const r = { canciones: [], partes: [], lectura: "" };
+  let sec = "", ultima = null;
+  lineas.forEach((l, i) => {
+    const U = sinAcento(l);
+    if (/^TESOROS DE LA BIBLIA/.test(U)) { sec = "t"; return; }
+    if (/^SEAMOS MEJORES MAESTROS/.test(U)) { sec = "s"; return; }
+    if (/^NUESTRA VIDA CRISTIANA/.test(U)) { sec = "n"; return; }
+    for (const m of l.matchAll(/Canci[oó]n\s+(\d{1,3})/gi)) r.canciones.push({ n: m[1], sec });
+    // Lectura semanal: primera línea en mayúsculas con libro y capítulos (después de la fecha)
+    if (!r.lectura && !sec && /^[A-ZÁÉÍÓÚÑ0-9 ]+\s\d+([,\-–]\s?\d+)*$/.test(l) && !/ DE (ENERO|FEBRERO|MARZO|ABRIL|MAYO|JUNIO|JULIO|AGOSTO|SEPTIEMBRE|OCTUBRE|NOVIEMBRE|DICIEMBRE)/.test(U)) r.lectura = l;
+    const m = l.match(/^(\d{1,2})\.\s*(.+)$/);
+    if (m && sec) {
+      let titulo = m[2], min = 0;
+      const mm = titulo.match(/\((\d+)\s*mins?\.?\)/i);
+      if (mm) { min = +mm[1]; titulo = titulo.slice(0, mm.index); }
+      titulo = titulo.replace(/\s*[|·].*$/, "").trim();
+      ultima = { n: +m[1], sec, titulo, min };
+      r.partes.push(ultima);
+      return;
+    }
+    if (ultima && !ultima.min) {
+      const mm = l.match(/^\(?(\d+)\s*mins?\.?\)?/i);
+      if (mm) ultima.min = +mm[1];
+    }
+  });
+  return r;
+}
+$("v-llenar").addEventListener("click", () => {
+  const msg = $("v-pegar-msg"), r = leerPrograma($("v-pegar").value);
+  const t = r.partes.filter(p => p.sec === "t"), sm = r.partes.filter(p => p.sec === "s"), nv = r.partes.filter(p => p.sec === "n");
+  if (!r.partes.length) { aviso(msg, "No encontré partes. Copia todo el programa de la semana (desde la fecha hasta la canción final) y vuelve a intentar.", 9000); return; }
+  if (t[0]) { vs.f.dt = t[0].titulo; if (t[0].min) vs.f.dm = String(t[0].min); }
+  if (t[1] && t[1].min) vs.f.pm = String(t[1].min);
+  if (t[2] && t[2].min) vs.f.lm = String(t[2].min);
+  if (sm.length) vs.smm = sm.map((p, i) => ({ t: p.titulo, m: p.min || 3, a1: vs.smm[i]?.a1 || "", a2: vs.smm[i]?.a2 || "", b1: vs.smm[i]?.b1 || "", b2: vs.smm[i]?.b2 || "" }));
+  const ebc = nv.find(p => /estudio b[ií]blico de (la )?congregaci/i.test(p.titulo));
+  if (ebc && ebc.min) vs.f.em = String(ebc.min);
+  const otras = nv.filter(p => p !== ebc);
+  if (otras.length) vs.nvc = otras.map((p, i) => ({ t: p.titulo, m: p.min || 10, a: vs.nvc[i]?.a || "" }));
+  const c = r.canciones;
+  if (c.length) {
+    vs.f.c1 = c[0].n;
+    const med = c.find(x => x.sec === "n"); if (med && med !== c[0]) vs.f.c2 = med.n;
+    if (c.length > 1) vs.f.c3 = c[c.length - 1].n;
+  }
+  if (r.lectura) vs.f.lectura = r.lectura;
+  V_CAMPOS.forEach(k => { if (vs.f[k] !== undefined) $("v-" + k).value = vs.f[k]; });
+  vListas(); vCambio();
+  aviso(msg, `Listo: ${r.partes.length} partes (${t.length} de Tesoros, ${sm.length} de Seamos mejores maestros, ${nv.length} de Nuestra vida cristiana). Revisa los títulos y llena los nombres.`, 12000);
+  $("v-pegar").value = "";
+});
 
 // Programa con horarios calculados
 function vPrograma() {
@@ -1258,7 +1340,7 @@ $("cong").addEventListener("input", () => { vCambio(); pCambio(); });
     ps.fecha = ps.fecha && ps.fecha >= lu ? ps.fecha : isoLocal(sig);
   }
   $("p-fecha").value = ps.fecha;
-  vListas(); pLista(); vCargarImg();
+  vListas(); pLista(); vCargarImg(); vEnlaceWol();
   vGuardar(); store.set("pred-state", ps);
   const h = location.hash.slice(1);
   abrir(["priv", "vym", "pred"].includes(h) ? h : store.get("tab", "priv"));
