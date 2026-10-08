@@ -1,6 +1,8 @@
 name: Explorar guía (prueba)
 on:
-  workflow_dispatch:
+  push:
+    branches: ["claude/**"]
+    paths: ["scripts/explorar-guia.mjs", ".github/workflows/guia.yml"]
 jobs:
   explorar:
     runs-on: ubuntu-latest
