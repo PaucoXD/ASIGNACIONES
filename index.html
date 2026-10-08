@@ -305,6 +305,23 @@ h2.sec-t { color: #2c6e7c; } h2.sec-s { color: #a87a00; } h2.sec-n { color: #b84
 <canvas id="cv-pred" hidden></canvas>
 
 <script>
+// Cambia este número en cada actualización. En GitHub Pages, si el teléfono
+// tiene guardada una versión vieja, la página se recarga sola con la nueva.
+const APP_VERSION = "6";
+(function buscarVersionNueva() {
+  if (!/github\.io$/.test(location.hostname)) return;
+  fetch(location.pathname + "?nocache=" + Date.now(), { cache: "no-store" })
+    .then(r => r.ok ? r.text() : "")
+    .then(t => {
+      const m = t.match(/APP_VERSION = "([^"]+)"/);
+      if (!m || m[1] === APP_VERSION) return;
+      const ya = new URLSearchParams(location.search).get("v");
+      if (ya === m[1]) return; // evita recargar en bucle
+      location.replace(location.pathname + "?v=" + encodeURIComponent(m[1]) + location.hash);
+    })
+    .catch(() => {});
+})();
+
 const PRESETS = {
   semana: [
     ["Presidente sala A", ""],
