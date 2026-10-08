@@ -62,12 +62,13 @@ function leerPrograma(texto) {
 // "7-13 DE SEPTIEMBRE" o "28 DE SEPTIEMBRE–4 DE OCTUBRE" → lunes de esa semana
 function lunes(encabezado, edicion) {
   const U = sinAcento(encabezado);
-  const m = U.match(/(\d{1,2})(?:\s+DE\s+([A-Z]+))?\s*[-–]\s*(\d{1,2})\s+DE\s+([A-Z]+)/);
+  // También "27 DE JULIO A 2 DE AGOSTO" y "28 DE DICIEMBRE DE 2026 A 3 DE ENERO DE 2027"
+  const m = U.match(/(\d{1,2})(?:\s+DE\s+([A-Z]+))?(?:\s+DE\s+(\d{4}))?\s*(?:[-–]|\sA\s)\s*(\d{1,2})\s+DE\s+([A-Z]+)/);
   if (!m) return null;
-  const mes = MESES.indexOf(m[2] || m[4]);
+  const mes = MESES.indexOf(m[2] || m[5]);
   if (mes < 0) return null;
-  let anio = +edicion.slice(0, 4);
-  if (mes === 11 && edicion.endsWith("01")) anio--;
+  let anio = m[3] ? +m[3] : +edicion.slice(0, 4);
+  if (!m[3] && mes === 11 && edicion.endsWith("01")) anio--;
   const d = new Date(anio, mes, +m[1]);
   d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
   return iso(d);

@@ -123,6 +123,12 @@ input.sb { border-color: color-mix(in srgb, var(--danger) 45%, var(--line)); }
 h2.sec-t { color: #2c6e7c; } h2.sec-s { color: #a87a00; } h2.sec-n { color: #b8483a; }
 #p-out { cursor: zoom-in; }
 .wol { display: grid; gap: 10px; padding: 12px; border-radius: 10px; background: var(--bg); }
+.estado { margin: 0; font-size: .92rem; }
+.estado.ok { color: var(--accent); font-weight: 600; }
+.wol details { display: grid; gap: 10px; }
+.wol details[open] { display: grid; }
+.wol summary { cursor: pointer; font-size: .88rem; color: var(--muted); }
+.wol details[open] > :not(summary) { margin-top: 10px; }
 .pasos { margin: 0; padding-left: 1.3em; display: grid; gap: 4px; font-size: .92rem; }
 .pasos a { color: var(--accent); font-weight: 600; }
 textarea { font: inherit; color: var(--fg); background: var(--surface); border: 1px solid var(--line); border-radius: 9px; padding: 9px 11px; width: 100%; resize: vertical; }
@@ -210,6 +216,9 @@ textarea { font: inherit; color: var(--fg); background: var(--surface); border: 
   <div class="panel">
     <div class="wol">
       <h2>Partes de la semana</h2>
+      <p class="estado" id="v-guia-estado">Buscando las partes de la semana…</p>
+      <details id="v-pegar-box">
+      <summary>¿No aparecieron? Pégalas desde wol.jw.org</summary>
       <ol class="pasos">
         <li><a id="v-wol" href="https://wol.jw.org/es/wol/meetings/r4/lp-s" target="_blank" rel="noopener">Abre la semana en wol.jw.org</a></li>
         <li>Mantén presionado el texto, elige <b>Seleccionar todo</b> y <b>Copiar</b>.</li>
@@ -217,6 +226,7 @@ textarea { font: inherit; color: var(--fg); background: var(--surface); border: 
       </ol>
       <textarea id="v-pegar" rows="4" placeholder="Pega aquí el programa de la semana"></textarea>
       <button type="button" class="primary" id="v-llenar">Llenar partes</button>
+      </details>
       <p class="toast" id="v-pegar-msg" role="status"></p>
     </div>
 
@@ -323,7 +333,7 @@ textarea { font: inherit; color: var(--fg); background: var(--surface); border: 
 <script>
 // Cambia este número en cada actualización. En GitHub Pages, si el teléfono
 // tiene guardada una versión vieja, la página se recarga sola con la nueva.
-const APP_VERSION = "7";
+const APP_VERSION = "8";
 (function buscarVersionNueva() {
   if (!/github\.io$/.test(location.hostname)) return;
   fetch(location.pathname + "?nocache=" + Date.now(), { cache: "no-store" })
@@ -973,10 +983,8 @@ function leerPrograma(texto) {
   });
   return r;
 }
-$("v-llenar").addEventListener("click", () => {
-  const msg = $("v-pegar-msg"), r = leerPrograma($("v-pegar").value);
+function aplicarPrograma(r) {
   const t = r.partes.filter(p => p.sec === "t"), sm = r.partes.filter(p => p.sec === "s"), nv = r.partes.filter(p => p.sec === "n");
-  if (!r.partes.length) { aviso(msg, "No encontré partes. Copia todo el programa de la semana (desde la fecha hasta la canción final) y vuelve a intentar.", 9000); return; }
   if (t[0]) { vs.f.dt = t[0].titulo; if (t[0].min) vs.f.dm = String(t[0].min); }
   if (t[1] && t[1].min) vs.f.pm = String(t[1].min);
   if (t[2] && t[2].min) vs.f.lm = String(t[2].min);
@@ -992,11 +1000,62 @@ $("v-llenar").addEventListener("click", () => {
     if (c.length > 1) vs.f.c3 = c[c.length - 1].n;
   }
   if (r.lectura) vs.f.lectura = r.lectura;
-  V_CAMPOS.forEach(k => { if (vs.f[k] !== undefined) $("v-" + k).value = vs.f[k]; });
+  vs.cargada = vs.semana;
+  vRefrescarForm();
+  return `${r.partes.length} partes (${t.length} de Tesoros, ${sm.length} de Seamos mejores maestros, ${nv.length} de Nuestra vida cristiana)`;
+}
+function vRefrescarForm() {
+  V_CAMPOS.forEach(k => { $("v-" + k).value = vs.f[k] ?? ""; });
   vListas(); vCambio();
-  aviso(msg, `Listo: ${r.partes.length} partes (${t.length} de Tesoros, ${sm.length} de Seamos mejores maestros, ${nv.length} de Nuestra vida cristiana). Revisa los títulos y llena los nombres.`, 12000);
+}
+$("v-llenar").addEventListener("click", () => {
+  const msg = $("v-pegar-msg"), r = leerPrograma($("v-pegar").value);
+  if (!r.partes.length) { aviso(msg, "No encontré partes. Copia todo el programa de la semana (desde la fecha hasta la canción final) y vuelve a intentar.", 9000); return; }
+  aviso(msg, `Listo: ${aplicarPrograma(r)}. Revisa los títulos y llena los nombres.`, 12000);
   $("v-pegar").value = "";
+  vEstadoGuia();
 });
+
+// ---------- Partes descargadas de la Guía de actividades (data/vym.json) ----------
+// Un proceso de GitHub descarga la Guía cada semana; aquí solo se lee el archivo.
+let vData = null, vDataListo = false;
+const claveSemana = iso => iso ? isoLocal(lunesDe(dLocal(iso))) : "";
+const V_NOMBRES = ["pres", "cons", "or1", "da", "pa", "la", "lb", "ec", "el", "or2"];
+function vEstadoGuia() {
+  const el = $("v-guia-estado"), d = vData?.[vs.semana];
+  el.classList.toggle("ok", vs.cargada === vs.semana);
+  if (vs.cargada === vs.semana && d) el.textContent = `✓ Partes cargadas de la Guía de actividades (${d.semana.toLowerCase()}).`;
+  else if (vs.cargada === vs.semana) el.textContent = "✓ Partes de esta semana llenadas.";
+  else if (vData) el.textContent = "Esta semana todavía no está en la Guía descargada. Puedes pegar el programa desde wol.jw.org.";
+  else if (vDataListo) el.textContent = "Llena las partes a mano o pégalas desde wol.jw.org.";
+  if (vDataListo && vs.cargada !== vs.semana) $("v-pegar-box").open = true;
+}
+function vIntentarCargar() {
+  const d = vData?.[vs.semana];
+  if (d && vs.cargada !== vs.semana) aplicarPrograma(d);
+  vEstadoGuia();
+}
+// Cada semana guarda sus propios nombres, para poder adelantar varias semanas
+function vCambiarSemana() {
+  const nueva = claveSemana(vs.f.fecha);
+  if (!nueva || nueva === vs.semana) return;
+  vs.porSemana = vs.porSemana || {};
+  if (vs.semana) vs.porSemana[vs.semana] = JSON.parse(JSON.stringify({ f: vs.f, smm: vs.smm, nvc: vs.nvc, cargada: vs.cargada }));
+  const g = vs.porSemana[nueva], fecha = vs.f.fecha;
+  if (g) { vs.f = { ...g.f, fecha }; vs.smm = g.smm; vs.nvc = g.nvc; vs.cargada = g.cargada; }
+  else {
+    V_NOMBRES.forEach(k => vs.f[k] = "");
+    vs.smm.forEach(p => { p.a1 = p.a2 = p.b1 = p.b2 = ""; });
+    vs.nvc.forEach(p => { p.a = ""; });
+    vs.cargada = null;
+  }
+  vs.semana = nueva;
+  const limite = isoLocal(new Date(Date.now() - 56 * 86400000));
+  Object.keys(vs.porSemana).forEach(k => { if (k < limite || k === nueva) delete vs.porSemana[k]; });
+  vRefrescarForm();
+  vIntentarCargar();
+}
+$("v-fecha").addEventListener("input", vCambiarSemana);
 
 // Programa con horarios calculados
 function vPrograma() {
@@ -1330,7 +1389,9 @@ $("cong").addEventListener("input", () => { vCambio(); pCambio(); });
 
 // ================= Inicio =================
 {
+  if (!vs.semana && vs.f.fecha) vs.semana = claveSemana(vs.f.fecha);
   const r = fechaFutura(vs.f.fecha, 4); vs.f.fecha = r.iso;
+  if (!vs.semana) vs.semana = claveSemana(vs.f.fecha);
   V_CAMPOS.forEach(k => { if (vs.f[k] !== undefined) $("v-" + k).value = vs.f[k]; });
   $("v-salab").checked = vs.salab;
   if (r.movida) aviso($("v-toast"), `La fecha guardada ya pasó. La cambié al ${fechaLargaDe(r.iso).toLowerCase()}.`, 9000);
@@ -1341,6 +1402,10 @@ $("cong").addEventListener("input", () => { vCambio(); pCambio(); });
   }
   $("p-fecha").value = ps.fecha;
   vListas(); pLista(); vCargarImg(); vEnlaceWol();
+  vCambiarSemana();
+  vEstadoGuia();
+  fetch("data/vym.json", { cache: "no-cache" }).then(x => x.ok ? x.json() : null).catch(() => null)
+    .then(d => { vData = d; vDataListo = true; vIntentarCargar(); });
   vGuardar(); store.set("pred-state", ps);
   const h = location.hash.slice(1);
   abrir(["priv", "vym", "pred"].includes(h) ? h : store.get("tab", "priv"));
