@@ -37,6 +37,7 @@
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 body {
   margin: 0; background: var(--bg); color: var(--fg);
   font: 16px/1.45 var(--body);
@@ -97,17 +98,49 @@ input.falta { border-color: var(--warn-fg); }
 .reuniones small { color: var(--muted); }
 .reuniones .del { padding: 6px 10px; color: var(--danger); background: transparent; font-size: .8rem; }
 .vacio { color: var(--muted); margin: 0; }
+.lista { display: grid; gap: 10px; }
+.parte { display: grid; gap: 6px; padding: 10px; border: 1px solid var(--line); border-radius: 10px; }
+.parte-top { display: flex; gap: 6px; align-items: center; }
+.parte-top > input:not(.min) { flex: 1 1 auto; min-width: 0; font-weight: 600; }
+.parte-top .fijo { flex: 1 1 auto; min-width: 0; font-weight: 600; padding-left: 2px; }
+.parte-top .n { font: 800 1.05rem var(--display); color: var(--muted); width: 1.4em; text-align: center; flex: 0 0 auto; }
+.parte-top .del { padding: 8px 10px; color: var(--danger); background: transparent; flex: 0 0 auto; }
+input.min { width: 4.2em; flex: 0 0 auto; text-align: center; }
+input.min.hora { width: 6em; }
+.parte-top .u { font-size: .8rem; color: var(--muted); }
+.salas { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 6px; }
+.salas.terr { grid-template-columns: minmax(0, .7fr) minmax(0, 1.3fr); }
+input.sb { border-color: color-mix(in srgb, var(--danger) 45%, var(--line)); }
+.sin-b .sala-b, .sin-b input.sb { display: none; }
+.sin-b .salas:has(input.sb) { grid-template-columns: minmax(0, 1fr); }
+.campos { display: grid; gap: 6px; }
+.dia.grupos .campos { display: none; }
+.dia-n { font-weight: 700; }
+.check { display: flex; gap: 8px; align-items: center; font-size: .9rem; cursor: pointer; }
+.check input { width: auto; }
+.boton { font: 600 .95rem var(--body); border-radius: 9px; padding: 10px 14px; cursor: pointer; border: 1px solid var(--line); background: var(--surface); color: var(--fg); text-align: center; flex: 1 1 150px; }
+.boton:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
+h2.sec-t { color: #2c6e7c; } h2.sec-s { color: #a87a00; } h2.sec-n { color: #b8483a; }
+#p-out { cursor: zoom-in; }
+.tabs { display: flex; gap: 6px; margin-top: 14px; overflow-x: auto; padding-bottom: 2px; }
+.tabs button { flex: 0 0 auto; border-radius: 999px; padding: 8px 16px; }
+.tabs button[aria-selected="true"] { background: var(--fg); color: var(--bg); border-color: var(--fg); }
 .toast { min-height: 1.2em; font-size: .85rem; color: var(--accent); margin: 0; }
 @media (prefers-reduced-motion: no-preference) { button { transition: filter .15s; } button:hover { filter: brightness(1.08); } }
 </style>
 </head>
 <body>
 <header class="top">
-  <h1>Privilegios de la reunión</h1>
-  <p class="sub">Llena los nombres y comparte la imagen en el grupo.</p>
+  <h1>Programas de la congregación</h1>
+  <p class="sub">Llena los datos y comparte la imagen en el grupo.</p>
+  <nav class="tabs" role="tablist" aria-label="Formato">
+    <button type="button" role="tab" id="tb-priv" data-tab="priv">Privilegios</button>
+    <button type="button" role="tab" id="tb-vym" data-tab="vym">Vida y Ministerio</button>
+    <button type="button" role="tab" id="tb-pred" data-tab="pred">Predicación</button>
+  </nav>
 </header>
 
-<div class="wrap">
+<div class="wrap tab" id="tab-priv" role="tabpanel">
   <form class="panel" id="form" autocomplete="off">
     <h2>Reunión</h2>
     <div class="seg" role="group" aria-label="Tipo de reunión">
@@ -169,7 +202,107 @@ input.falta { border-color: var(--warn-fg); }
   </section>
 </div>
 
+<div class="wrap tab" id="tab-vym" role="tabpanel" hidden>
+  <div class="panel">
+    <h2>Semana</h2>
+    <div class="grid2">
+      <label class="f">Fecha de la reunión<input id="v-fecha" type="date"></label>
+      <label class="f">Hora de inicio<input id="v-hora" type="time" value="19:30"></label>
+      <label class="f">Lectura de la semana<input id="v-lectura" placeholder="Jeremías 47, 48"></label>
+    </div>
+    <div class="grid2">
+      <label class="f">Preside (sala A)<input id="v-pres" list="nombres"></label>
+      <label class="f">Consejero sala B<input id="v-cons" list="nombres"></label>
+    </div>
+    <label class="check"><input type="checkbox" id="v-salab" checked> Hay sala B</label>
+
+    <h2>Inicio</h2>
+    <div class="grid2">
+      <label class="f">Canción inicial<input id="v-c1" inputmode="numeric" placeholder="Núm."></label>
+      <label class="f">Oración inicial<input id="v-or1" list="nombres"></label>
+    </div>
+
+    <h2 class="sec-t">Tesoros de la Biblia</h2>
+    <div class="parte">
+      <div class="parte-top"><input id="v-dt" aria-label="Título del discurso" placeholder="Discurso"><input id="v-dm" class="min" inputmode="numeric" aria-label="Minutos" value="10"><span class="u">min</span></div>
+      <input id="v-da" list="nombres" placeholder="Hermano" aria-label="Discurso: hermano">
+    </div>
+    <div class="parte">
+      <div class="parte-top"><span class="fijo">Buscando perlas escondidas</span><input id="v-pm" class="min" inputmode="numeric" aria-label="Minutos" value="10"><span class="u">min</span></div>
+      <input id="v-pa" list="nombres" placeholder="Hermano" aria-label="Perlas escondidas: hermano">
+    </div>
+    <div class="parte">
+      <div class="parte-top"><span class="fijo">Lectura de la Biblia</span><input id="v-lm" class="min" inputmode="numeric" aria-label="Minutos" value="4"><span class="u">min</span></div>
+      <div class="salas"><input id="v-la" list="nombres" placeholder="Sala A" aria-label="Lectura sala A"><input id="v-lb" class="sb" list="nombres" placeholder="Sala B" aria-label="Lectura sala B"></div>
+    </div>
+
+    <h2 class="sec-s">Seamos mejores maestros</h2>
+    <div id="v-smm" class="lista"></div>
+    <button type="button" id="v-smm-add">+ Agregar parte</button>
+
+    <h2 class="sec-n">Nuestra vida cristiana</h2>
+    <label class="f">Canción intermedia<input id="v-c2" inputmode="numeric" placeholder="Núm."></label>
+    <div id="v-nvc" class="lista"></div>
+    <button type="button" id="v-nvc-add">+ Agregar parte</button>
+    <div class="parte">
+      <div class="parte-top"><span class="fijo">Estudio bíblico de la congregación</span><input id="v-em" class="min" inputmode="numeric" aria-label="Minutos" value="30"><span class="u">min</span></div>
+      <div class="salas"><input id="v-ec" list="nombres" placeholder="Conductor" aria-label="Conductor"><input id="v-el" list="nombres" placeholder="Lector" aria-label="Lector"></div>
+    </div>
+
+    <h2>Final</h2>
+    <div class="grid2">
+      <label class="f">Canción final<input id="v-c3" inputmode="numeric" placeholder="Núm."></label>
+      <label class="f">Oración final<input id="v-or2" list="nombres"></label>
+    </div>
+
+    <h2>Imagen (opcional)</h2>
+    <div class="actions">
+      <label class="boton"><input type="file" id="v-img" accept="image/*" hidden>Elegir imagen</label>
+      <button type="button" id="v-img-x">Quitar imagen</button>
+    </div>
+  </div>
+
+  <section class="panel preview" aria-label="Vista previa">
+    <h2>Imagen</h2>
+    <img id="v-out" alt="Programa de Vida y Ministerio generado">
+    <div class="actions">
+      <button type="button" class="primary" id="v-share">Compartir</button>
+      <button type="button" id="v-download">Descargar</button>
+      <button type="button" id="v-copy">Copiar texto</button>
+    </div>
+    <p class="toast" id="v-toast" role="status"></p>
+    <p class="hint">Los horarios se calculan solos con la hora de inicio y los minutos de cada parte. En Seamos mejores maestros se suma 1 minuto de consejo por parte.</p>
+  </section>
+</div>
+<div class="wrap tab" id="tab-pred" role="tabpanel" hidden>
+  <div class="panel">
+    <h2>Semana</h2>
+    <div class="grid2">
+      <label class="f">Lunes de la semana<input id="p-fecha" type="date"></label>
+    </div>
+    <h2>Días</h2>
+    <div id="p-dias" class="lista"></div>
+    <div class="actions">
+      <button type="button" id="p-add">+ Agregar día</button>
+      <button type="button" id="p-reset">Restablecer días</button>
+    </div>
+  </div>
+
+  <section class="panel preview" aria-label="Vista previa">
+    <h2>Imagen</h2>
+    <img id="p-out" alt="Programa de predicación generado">
+    <div class="actions">
+      <button type="button" class="primary" id="p-share">Compartir</button>
+      <button type="button" id="p-download">Descargar</button>
+      <button type="button" id="p-copy">Copiar texto</button>
+    </div>
+    <p class="toast" id="p-toast" role="status"></p>
+    <p class="hint">Si varios días seguidos tienen la misma hora, en la imagen se juntan en una sola celda.</p>
+  </section>
+</div>
 <canvas id="cv" hidden></canvas>
+<canvas id="cv-vym" hidden></canvas>
+<canvas id="cv-pred" hidden></canvas>
 
 <script>
 const PRESETS = {
@@ -596,6 +729,525 @@ if (document.fonts) Promise.all([
   '800 104px "Bricolage Grotesque"', '600 46px "Bricolage Grotesque"',
   '500 36px "Figtree"', '600 30px "Figtree"', '700 28px "Figtree"',
 ].map(f => document.fonts.load(f))).then(draw, draw);
+</script>
+<script>
+// ================= Utilidades compartidas por las pestañas nuevas =================
+const DISPF = '"Bricolage Grotesque", sans-serif', BODYF = '"Figtree", sans-serif';
+function aviso(el, s, ms = 3500) { el.textContent = s; clearTimeout(el._t); el._t = setTimeout(() => el.textContent = "", ms); }
+function dLocal(iso) { const [y, m, d] = iso.split("-").map(Number); return new Date(y, m - 1, d); }
+function mesCorto(d) { return d.toLocaleDateString("es-MX", { month: "short" }).replace(".", ""); }
+function lunesDe(d) { const x = new Date(d); x.setDate(x.getDate() - ((x.getDay() + 6) % 7)); return x; }
+function rangoSemana(iso, larga) {
+  if (!iso) return "";
+  const lu = lunesDe(dLocal(iso)), dom = new Date(lu); dom.setDate(lu.getDate() + 6);
+  if (larga) {
+    const m1 = lu.toLocaleDateString("es-MX", { month: "long" }), m2 = dom.toLocaleDateString("es-MX", { month: "long" });
+    return m1 === m2 ? `${lu.getDate()} al ${dom.getDate()} de ${m2}` : `${lu.getDate()} de ${m1} al ${dom.getDate()} de ${m2}`;
+  }
+  if (lu.getMonth() === dom.getMonth()) return `${lu.getDate()} al ${dom.getDate()} de ${mesCorto(dom)}`;
+  return `${lu.getDate()} de ${mesCorto(lu)} a ${dom.getDate()} de ${mesCorto(dom)}`;
+}
+function hora12(hhmm) {
+  if (!hhmm) return "";
+  let [h, m] = hhmm.split(":").map(Number);
+  return `${h % 12 || 12}:${String(m).padStart(2, "0")}`;
+}
+function sumarMin(hhmm, min) {
+  let [h, m] = (hhmm || "19:30").split(":").map(Number);
+  const t = h * 60 + m + min;
+  return `${String(Math.floor(t / 60) % 24).padStart(2, "0")}:${String(t % 60).padStart(2, "0")}`;
+}
+const num = v => Math.max(0, parseInt(v, 10) || 0);
+function fit(ctx, text, maxW, size, weight, family, min = 18) {
+  let s = size;
+  ctx.font = `${weight} ${s}px ${family}`;
+  while (ctx.measureText(text).width > maxW && s > min) { s -= 1; ctx.font = `${weight} ${s}px ${family}`; }
+  return s;
+}
+function rrect(ctx, x, y, w, h, r) { ctx.beginPath(); ctx.roundRect(x, y, w, h, r); }
+async function blobDe(cv) { return new Promise(res => cv.toBlob(res, "image/png")); }
+async function compartirCanvas(cv, nombre, texto, tEl) {
+  try {
+    const file = new File([await blobDe(cv)], nombre, { type: "image/png" });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      await navigator.share({ files: [file], text: texto });
+      aviso(tEl, "Listo para enviar.");
+    } else aviso(tEl, "Este navegador no permite compartir. Usa Descargar o mantén presionada la imagen.");
+  } catch (e) { if (e.name !== "AbortError") aviso(tEl, "No se pudo compartir. Mantén presionada la imagen para guardarla."); }
+}
+async function descargarCanvas(cv, nombre, tEl) {
+  const dl = window.claude?.use ? await window.claude.use("downloads").catch(() => null) : null;
+  if (dl) {
+    try { await dl.save({ filename: nombre, data: await blobDe(cv) }); aviso(tEl, "Imagen guardada."); }
+    catch (e) { if (e?.code !== "declined") aviso(tEl, "No se pudo descargar. Mantén presionada la imagen para guardarla."); }
+    return;
+  }
+  const a = document.createElement("a");
+  a.href = cv.toDataURL("image/png"); a.download = nombre;
+  document.body.appendChild(a); a.click(); a.remove();
+  aviso(tEl, "Descarga iniciada. Si no aparece, mantén presionada la imagen.");
+}
+async function copiarTexto(texto, tEl) {
+  try { await navigator.clipboard.writeText(texto); aviso(tEl, "Texto copiado. Pégalo en WhatsApp."); }
+  catch { aviso(tEl, "No se pudo copiar automáticamente."); }
+}
+function encabezado(ctx, W, h, pad, titulo, sub, cong) {
+  const g = ctx.createLinearGradient(0, 0, W, h);
+  g.addColorStop(0, "#1f5f7a"); g.addColorStop(1, "#163f52");
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, h);
+  ctx.fillStyle = "rgba(255,255,255,.06)";
+  ctx.beginPath(); ctx.arc(-60, h, 200, 0, Math.PI * 2); ctx.fill();
+  ctx.textBaseline = "alphabetic"; ctx.textAlign = "left";
+  ctx.fillStyle = "#cfe3ec"; fit(ctx, cong.toUpperCase(), W * .6, 28, 600, BODYF); ctx.fillText(cong.toUpperCase(), pad, 78);
+}
+function hojaCalendario(ctx, x, y, w, h, iso) {
+  if (!iso) return;
+  const d = dLocal(iso), r = 20;
+  ctx.save(); ctx.shadowColor = "rgba(0,0,0,.28)"; ctx.shadowBlur = 28; ctx.shadowOffsetY = 10;
+  ctx.fillStyle = "#fff"; rrect(ctx, x, y, w, h, r); ctx.fill(); ctx.restore();
+  ctx.save(); rrect(ctx, x, y, w, h, r); ctx.clip(); ctx.fillStyle = "#f2b33d"; ctx.fillRect(x, y, w, h * .25); ctx.restore();
+  ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  const cx = x + w / 2, mes = d.toLocaleDateString("es-MX", { month: "long" }).toUpperCase(), sem = d.toLocaleDateString("es-MX", { weekday: "long" }).toUpperCase();
+  ctx.fillStyle = "#3a2a05"; fit(ctx, mes, w - 24, 28, 700, BODYF); ctx.fillText(mes, cx, y + h * .125);
+  ctx.fillStyle = "#17212b"; ctx.font = `800 ${Math.round(h * .46)}px ${DISPF}`; ctx.fillText(String(d.getDate()), cx, y + h * .56);
+  ctx.fillStyle = "#1f5f7a"; fit(ctx, sem, w - 24, 26, 700, BODYF); ctx.fillText(sem, cx, y + h * .87);
+  ctx.textAlign = "left";
+}
+// Lienzo alto de trabajo; al final se recorta a la altura usada
+function recortar(src, w, h, dest) { dest.width = w; dest.height = h; dest.getContext("2d").drawImage(src, 0, 0); }
+function fechaFutura(iso, diaSemana) {
+  // Si la fecha guardada ya pasó, mueve a la siguiente del día indicado (0 dom … 6 sáb)
+  const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+  if (iso && dLocal(iso) >= hoy) return { iso, movida: false };
+  const d = new Date(hoy);
+  while (d.getDay() !== diaSemana) d.setDate(d.getDate() + 1);
+  return { iso: isoLocal(d), movida: !!iso };
+}
+function enlazarNombre(el) { el.addEventListener("change", () => rememberName(el.value)); }
+
+// ================= Vida y Ministerio =================
+const V_CAMPOS = ["fecha", "hora", "lectura", "pres", "cons", "c1", "or1", "dt", "dm", "da", "pm", "pa", "lm", "la", "lb", "c2", "em", "ec", "el", "c3", "or2"];
+const V_SMM = () => [
+  { t: "Empiece conversaciones", m: 3, a1: "", a2: "", b1: "", b2: "" },
+  { t: "Haga revisitas", m: 4, a1: "", a2: "", b1: "", b2: "" },
+  { t: "Haga discípulos", m: 5, a1: "", a2: "", b1: "", b2: "" },
+];
+const V_NVC = () => [{ t: "Necesidades de la congregación", m: 15, a: "" }];
+let vs = store.get("vym-state", null) || { f: { hora: "19:30", dm: "10", pm: "10", lm: "4", em: "30" }, salab: true, smm: V_SMM(), nvc: V_NVC(), img: "" };
+let vImg = null;
+
+function vGuardar() { try { localStorage.setItem("vym-state", JSON.stringify(vs)); } catch { const c = { ...vs, img: "" }; store.set("vym-state", c); } }
+let vt;
+function vCambio() { vGuardar(); clearTimeout(vt); vt = setTimeout(vDibujar, 120); }
+
+function vListas() {
+  const smm = $("v-smm");
+  smm.innerHTML = vs.smm.map((p, i) => `
+    <div class="parte" data-i="${i}">
+      <div class="parte-top"><span class="n">${i + 4}</span><input data-f="t" value="${esc(p.t)}" aria-label="Título de la parte ${i + 4}"><input data-f="m" class="min" inputmode="numeric" value="${esc(p.m)}" aria-label="Minutos"><span class="u">min</span><button type="button" class="del" aria-label="Quitar parte">✕</button></div>
+      <div class="salas"><input data-f="a1" list="nombres" placeholder="Sala A: estudiante" value="${esc(p.a1)}"><input data-f="a2" list="nombres" placeholder="Ayudante" value="${esc(p.a2)}"></div>
+      <div class="salas sala-b"><input data-f="b1" class="sb" list="nombres" placeholder="Sala B: estudiante" value="${esc(p.b1)}"><input data-f="b2" class="sb" list="nombres" placeholder="Ayudante" value="${esc(p.b2)}"></div>
+    </div>`).join("");
+  const nvc = $("v-nvc");
+  nvc.innerHTML = vs.nvc.map((p, i) => `
+    <div class="parte" data-i="${i}">
+      <div class="parte-top"><span class="n">${vs.smm.length + 4 + i}</span><input data-f="t" value="${esc(p.t)}" aria-label="Título de la parte"><input data-f="m" class="min" inputmode="numeric" value="${esc(p.m)}" aria-label="Minutos"><span class="u">min</span><button type="button" class="del" aria-label="Quitar parte">✕</button></div>
+      <input data-f="a" list="nombres" placeholder="Hermano" value="${esc(p.a)}">
+    </div>`).join("");
+  document.querySelectorAll("#v-smm [list=nombres], #v-nvc [list=nombres]").forEach(enlazarNombre);
+  $("tab-vym").classList.toggle("sin-b", !vs.salab);
+}
+function vLista(box, arr) {
+  box.addEventListener("input", e => {
+    const p = e.target.closest(".parte"); if (!p || !e.target.dataset.f) return;
+    arr()[p.dataset.i][e.target.dataset.f] = e.target.value; vCambio();
+  });
+  box.addEventListener("click", e => {
+    if (!e.target.classList.contains("del")) return;
+    arr().splice(e.target.closest(".parte").dataset.i, 1); vListas(); vCambio();
+  });
+}
+vLista($("v-smm"), () => vs.smm);
+vLista($("v-nvc"), () => vs.nvc);
+$("v-smm-add").addEventListener("click", () => { vs.smm.push({ t: "", m: 5, a1: "", a2: "", b1: "", b2: "" }); vListas(); vCambio(); });
+$("v-nvc-add").addEventListener("click", () => { vs.nvc.push({ t: "", m: 10, a: "" }); vListas(); vCambio(); });
+V_CAMPOS.forEach(k => {
+  const el = $("v-" + k);
+  el.addEventListener("input", () => { vs.f[k] = el.value; vCambio(); });
+  if (el.getAttribute("list") === "nombres") enlazarNombre(el);
+});
+$("v-salab").addEventListener("change", e => { vs.salab = e.target.checked; vListas(); vCambio(); });
+$("v-img").addEventListener("change", e => {
+  const file = e.target.files[0]; if (!file) return;
+  const r = new FileReader();
+  r.onload = () => {
+    const im = new Image();
+    im.onload = () => {
+      const s = Math.min(1, 640 / im.width), c = document.createElement("canvas");
+      c.width = Math.round(im.width * s); c.height = Math.round(im.height * s);
+      c.getContext("2d").drawImage(im, 0, 0, c.width, c.height);
+      vs.img = c.toDataURL("image/jpeg", .85); vCargarImg(); vCambio();
+    };
+    im.src = r.result;
+  };
+  r.readAsDataURL(file);
+  e.target.value = "";
+});
+$("v-img-x").addEventListener("click", () => { vs.img = ""; vImg = null; vCambio(); });
+function vCargarImg() {
+  if (!vs.img) { vImg = null; return; }
+  const im = new Image(); im.onload = () => { vImg = im; vDibujar(); }; im.src = vs.img;
+}
+
+// Programa con horarios calculados
+function vPrograma() {
+  const f = vs.f, salab = vs.salab;
+  let t = f.hora || "19:30";
+  const out = [];
+  const paso = m => { const h = t; t = sumarMin(t, m); return h; };
+  out.push({ k: "cancion", h: paso(5), n: f.c1, extra: ["Oración inicial", f.or1] });
+  out.push({ k: "sec", s: "t", titulo: "Tesoros de la Biblia" });
+  let n = 1;
+  out.push({ k: "parte", s: "t", h: paso(num(f.dm)), n: n++, titulo: f.dt || "Discurso", m: num(f.dm), a: [f.da] });
+  out.push({ k: "parte", s: "t", h: paso(num(f.pm)), n: n++, titulo: "Buscando perlas escondidas", m: num(f.pm), a: [f.pa] });
+  out.push({ k: "parte", s: "t", h: paso(num(f.lm)), n: n++, titulo: "Lectura de la Biblia", m: num(f.lm), a: [f.la], b: salab ? [f.lb] : null });
+  out.push({ k: "sec", s: "s", titulo: "Seamos mejores maestros" });
+  const par = (x, y) => [x, y].map(v => (v || "").trim()).filter(Boolean).join(" / ");
+  vs.smm.forEach(p => out.push({ k: "parte", s: "s", h: paso(num(p.m) + 1), n: n++, titulo: p.t, m: num(p.m), a: [par(p.a1, p.a2)], b: salab ? [par(p.b1, p.b2)] : null }));
+  out.push({ k: "sec", s: "n", titulo: "Nuestra vida cristiana" });
+  out.push({ k: "cancion", h: paso(5), n: f.c2 });
+  vs.nvc.forEach(p => out.push({ k: "parte", s: "n", h: paso(num(p.m)), n: n++, titulo: p.t, m: num(p.m), a: [p.a] }));
+  out.push({ k: "parte", s: "n", h: paso(num(f.em)), n: n++, titulo: "Estudio bíblico de la congregación", m: num(f.em), a: [f.ec], lector: f.el });
+  out.push({ k: "linea", h: paso(3), titulo: "Palabras de conclusión", m: 3, nombre: f.pres });
+  out.push({ k: "cancion", h: paso(5), n: f.c3, extra: ["Oración final", f.or2] });
+  return out;
+}
+
+const VC = { t: "#2c6e7c", s: "#a87a00", n: "#a3392b", a: "#1d3557", b: "#b02a2a", muted: "#6b7884", fg: "#17212b", line: "#dbe3e9", bg: "#ffffff" };
+function vDibujar() {
+  const W = 1080, pad = 64, work = document.createElement("canvas");
+  work.width = W; work.height = 5000;
+  const ctx = work.getContext("2d"), f = vs.f;
+  ctx.fillStyle = VC.bg; ctx.fillRect(0, 0, W, work.height);
+
+  const headH = 300, tileW = 200, tileH = 220, tileX = W - pad - tileW;
+  encabezado(ctx, W, headH, pad, "", "", $("cong").value || "");
+  hojaCalendario(ctx, tileX, (headH - tileH) / 2, tileW, tileH, f.fecha);
+  const leftW = tileX - 36 - pad;
+  ctx.fillStyle = "#fff"; fit(ctx, "Vida y Ministerio", leftW, 92, 800, DISPF, 50); ctx.fillText("Vida y Ministerio", pad, 172);
+  ctx.fillStyle = "#cfe3ec";
+  const sub = [f.fecha ? "Semana del " + rangoSemana(f.fecha) : "", (f.lectura || "").toUpperCase()].filter(Boolean).join("  ·  ");
+  fit(ctx, sub, leftW, 32, 600, BODYF, 20); ctx.fillText(sub, pad, 238);
+
+  // Preside / consejero
+  let y = headH + 44;
+  const col2 = W / 2 + 10;
+  ctx.textBaseline = "alphabetic";
+  ctx.fillStyle = VC.a; ctx.font = `700 22px ${BODYF}`; ctx.fillText("PRESIDE · SALA A", pad, y);
+  ctx.fillStyle = VC.fg; fit(ctx, f.pres || "—", col2 - pad - 20, 38, 600, DISPF); ctx.fillText(f.pres || "—", pad, y + 46);
+  if (vs.salab) {
+    ctx.fillStyle = VC.b; ctx.font = `700 22px ${BODYF}`; ctx.fillText("CONSEJERO · SALA B", col2, y);
+    ctx.fillStyle = VC.fg; fit(ctx, f.cons || "—", W - pad - col2, 38, 600, DISPF); ctx.fillText(f.cons || "—", col2, y + 46);
+  }
+  y += 84;
+  ctx.fillStyle = VC.line; ctx.fillRect(pad, y, W - pad * 2, 2);
+  y += 34;
+
+  const tx = pad, cx = pad + 112, nx = cx + 46;
+  const prog = vPrograma();
+  let imgPuesta = false;
+  const horaTxt = h => { ctx.fillStyle = VC.muted; ctx.font = `500 24px ${BODYF}`; ctx.fillText(hora12(h), tx, y); };
+  const nombreLinea = (txt, color, sala, maxW) => {
+    let x = nx;
+    if (sala) {
+      ctx.fillStyle = color; rrect(ctx, x, y - 24, 30, 30, 8); ctx.fill();
+      ctx.fillStyle = "#fff"; ctx.font = `700 19px ${BODYF}`; ctx.textAlign = "center"; ctx.fillText(sala, x + 15, y - 2); ctx.textAlign = "left";
+      x += 42;
+    }
+    const v = (txt || "").trim();
+    ctx.fillStyle = v ? color : "#a3b0bb";
+    fit(ctx, v || "Por asignar", maxW - (x - nx), 31, v ? 700 : 500, BODYF, 20);
+    ctx.fillText(v || "Por asignar", x, y);
+  };
+  for (const it of prog) {
+    ctx.textBaseline = "alphabetic";
+    const maxW = (vImg && !imgPuesta) || (vImg && it.s === "t") ? W - pad - 340 - nx : W - pad - nx;
+    if (it.k === "sec") {
+      y += 14;
+      const c = VC[it.s];
+      ctx.fillStyle = c; rrect(ctx, cx, y - 28, 34, 34, 8); ctx.fill();
+      ctx.fillStyle = c; ctx.font = `700 30px ${BODYF}`; ctx.fillText(it.titulo, cx + 48, y);
+      ctx.fillRect(cx, y + 16, Math.min(560, ctx.measureText(it.titulo).width + 60), 3);
+      if (it.s === "t" && vImg) {
+        const iw = 320, ih = Math.min(240, vImg.height * iw / vImg.width);
+        ctx.save(); rrect(ctx, W - pad - iw, y + 40, iw, ih, 14); ctx.clip();
+        ctx.drawImage(vImg, W - pad - iw, y + 40, iw, ih); ctx.restore();
+        imgPuesta = true;
+      }
+      y += 70;
+    } else if (it.k === "cancion") {
+      horaTxt(it.h);
+      ctx.fillStyle = VC.fg; ctx.font = `600 31px ${BODYF}`;
+      ctx.fillText(`♪  Canción${it.n ? " " + it.n : ""}`, cx, y);
+      if (it.extra) {
+        y += 44;
+        ctx.fillStyle = VC.fg; ctx.font = `500 29px ${BODYF}`; ctx.fillText(it.extra[0], cx, y);
+        const v = (it.extra[1] || "").trim();
+        ctx.fillStyle = v ? VC.fg : "#a3b0bb"; fit(ctx, v || "Por asignar", W - pad - (cx + 330), 31, v ? 700 : 500, BODYF, 20);
+        ctx.fillText(v || "Por asignar", cx + 330, y);
+      }
+      y += 64;
+    } else if (it.k === "linea") {
+      horaTxt(it.h);
+      ctx.fillStyle = VC.fg; ctx.font = `700 31px ${BODYF}`; ctx.fillText(it.titulo, cx, y);
+      const w = ctx.measureText(it.titulo).width;
+      ctx.fillStyle = VC.muted; ctx.font = `500 26px ${BODYF}`; ctx.fillText(` (${it.m} mins.)`, cx + w, y);
+      y += 64;
+    } else {
+      horaTxt(it.h);
+      const c = VC[it.s];
+      ctx.fillStyle = c; ctx.font = `800 31px ${DISPF}`; ctx.fillText(String(it.n), cx, y);
+      const tt = it.titulo || "Parte";
+      const minTxt = it.m ? ` (${it.m} mins.)` : "";
+      ctx.font = `500 26px ${BODYF}`; const mw = ctx.measureText(minTxt).width;
+      ctx.fillStyle = c; fit(ctx, tt, maxW - mw, 31, 700, BODYF, 20); ctx.fillText(tt, nx, y);
+      const w = ctx.measureText(tt).width;
+      ctx.fillStyle = VC.muted; ctx.font = `500 26px ${BODYF}`; ctx.fillText(minTxt, nx + w, y);
+      const dos = !!it.b;
+      y += 44; nombreLinea(it.a[0], VC.a, dos ? "A" : "", maxW);
+      if (dos) { y += 44; nombreLinea(it.b[0], VC.b, "B", maxW); }
+      if (it.lector !== undefined) {
+        y += 44;
+        ctx.fillStyle = VC.muted; ctx.font = `500 26px ${BODYF}`; ctx.fillText("Lector:", nx, y);
+        const v = (it.lector || "").trim();
+        ctx.fillStyle = v ? VC.fg : "#a3b0bb"; fit(ctx, v || "Por asignar", maxW - 100, 31, v ? 700 : 500, BODYF, 20); ctx.fillText(v || "Por asignar", nx + 100, y);
+      }
+      y += 66;
+    }
+  }
+  const H = y + 10;
+  recortar(work, W, H, $("cv-vym"));
+  $("v-out").src = $("cv-vym").toDataURL("image/png");
+}
+function vTexto() {
+  const f = vs.f, L = [`*Vida y Ministerio Cristiano*`];
+  const sem = [f.fecha ? "Semana del " + rangoSemana(f.fecha) : "", f.lectura].filter(Boolean).join(" · ");
+  if (sem) L.push(sem);
+  L.push(`Preside: ${f.pres || "Por asignar"}` + (vs.salab ? ` | Sala B: ${f.cons || "Por asignar"}` : ""), "");
+  for (const it of vPrograma()) {
+    if (it.k === "sec") L.push("", `*${it.titulo}*`);
+    else if (it.k === "cancion") { L.push(`${hora12(it.h)} Canción${it.n ? " " + it.n : ""}`); if (it.extra) L.push(`${it.extra[0]}: ${it.extra[1] || "Por asignar"}`); }
+    else if (it.k === "linea") L.push("", `${hora12(it.h)} ${it.titulo}: ${it.nombre || "Por asignar"}`);
+    else {
+      L.push(`${hora12(it.h)} ${it.n}. ${it.titulo} (${it.m} min)`);
+      L.push(`   ${it.b ? "A: " : ""}${it.a[0] || "Por asignar"}`);
+      if (it.b) L.push(`   B: ${it.b[0] || "Por asignar"}`);
+      if (it.lector !== undefined) L.push(`   Lector: ${it.lector || "Por asignar"}`);
+    }
+  }
+  return L.join("\n");
+}
+const vNombre = () => `vida-y-ministerio-${vs.f.fecha || "semana"}.png`;
+$("v-share").addEventListener("click", () => { vDibujar(); compartirCanvas($("cv-vym"), vNombre(), vTexto(), $("v-toast")); });
+$("v-download").addEventListener("click", () => { vDibujar(); descargarCanvas($("cv-vym"), vNombre(), $("v-toast")); });
+$("v-copy").addEventListener("click", () => copiarTexto(vTexto(), $("v-toast")));
+
+// ================= Predicación =================
+const P_DIAS = () => [
+  ...["Martes", "Miércoles", "Jueves", "Viernes", "Sábado"].map(d => ({ dia: d, hora: "8:30", cap: "", tn: "", tnom: "", manz: "", lugar: "", grupos: false })),
+  { dia: "Domingo", hora: "", cap: "", tn: "", tnom: "", manz: "", lugar: "Salón del Reino", grupos: true },
+];
+let ps = store.get("pred-state", null) || { fecha: "", dias: P_DIAS() };
+let pt;
+function pCambio() { store.set("pred-state", ps); clearTimeout(pt); pt = setTimeout(pDibujar, 120); }
+function pLista() {
+  $("p-dias").innerHTML = ps.dias.map((d, i) => `
+    <div class="parte dia ${d.grupos ? "grupos" : ""}" data-i="${i}">
+      <div class="parte-top"><input data-f="dia" value="${esc(d.dia)}" aria-label="Día" class="dia-n"><input data-f="hora" value="${esc(d.hora)}" class="min hora" aria-label="Hora" placeholder="Hora"><button type="button" class="del" aria-label="Quitar día">✕</button></div>
+      <label class="check"><input type="checkbox" data-f="grupos" ${d.grupos ? "checked" : ""}> Predicación por grupos</label>
+      <div class="campos">
+        <label class="f">Capitán<input data-f="cap" list="nombres" value="${esc(d.cap)}"></label>
+        <div class="salas terr"><label class="f">Territorio<input data-f="tn" value="${esc(d.tn)}" placeholder="4, 6"></label><label class="f">Nombre<input data-f="tnom" value="${esc(d.tnom)}" placeholder="Portal"></label></div>
+        <label class="f">Manzanas por trabajar<input data-f="manz" value="${esc(d.manz)}" placeholder="Territorio 6: continuación"></label>
+      </div>
+      <label class="f">Lugar de encuentro<input data-f="lugar" value="${esc(d.lugar)}" placeholder="Fam. …"></label>
+    </div>`).join("");
+  document.querySelectorAll("#p-dias [list=nombres]").forEach(enlazarNombre);
+}
+$("p-dias").addEventListener("input", e => {
+  const p = e.target.closest(".parte"), k = e.target.dataset.f; if (!p || !k) return;
+  const d = ps.dias[p.dataset.i];
+  d[k] = e.target.type === "checkbox" ? e.target.checked : e.target.value;
+  if (k === "grupos") p.classList.toggle("grupos", d.grupos);
+  pCambio();
+});
+$("p-dias").addEventListener("click", e => {
+  if (!e.target.classList.contains("del")) return;
+  ps.dias.splice(e.target.closest(".parte").dataset.i, 1); pLista(); pCambio();
+});
+$("p-add").addEventListener("click", () => { ps.dias.push({ dia: "", hora: ps.dias.at(-1)?.hora || "8:30", cap: "", tn: "", tnom: "", manz: "", lugar: "", grupos: false }); pLista(); pCambio(); });
+$("p-reset").addEventListener("click", () => {
+  const b = $("p-reset");
+  if (b.dataset.ok !== "1") { b.dataset.ok = "1"; b.textContent = "¿Borrar todo? Toca otra vez"; setTimeout(() => { b.dataset.ok = ""; b.textContent = "Restablecer días"; }, 4000); return; }
+  b.dataset.ok = ""; b.textContent = "Restablecer días";
+  ps.dias = P_DIAS(); pLista(); pCambio();
+});
+$("p-fecha").addEventListener("input", e => { ps.fecha = e.target.value; pCambio(); });
+
+const PC = [
+  { k: "dia", t: "Día", w: 150, bg: "#b3261e", fg: "#fff" },
+  { k: "hora", t: "Hora", w: 140, bg: "#f2c230", fg: "#3a2a05" },
+  { k: "cap", t: "Capitán", w: 250, bg: "#1f6fd1", fg: "#fff" },
+  { k: "tn", t: "Territorio", w: 110, bg: "#ef8a1f", fg: "#fff" },
+  { k: "tnom", t: "", w: 220, bg: "#ef8a1f", fg: "#fff" },
+  { k: "manz", t: "Manzanas por trabajar", w: 324, bg: "#c62828", fg: "#fff" },
+  { k: "lugar", t: "Lugar de encuentro", w: 310, bg: "#1d3f7a", fg: "#fff" },
+];
+function pDibujar() {
+  const pad = 48, W = pad * 2 + PC.reduce((a, c) => a + c.w, 0);
+  const headH = 190, thH = 62, rowH = 82;
+  const filas = ps.dias.filter(d => d.dia.trim() || d.cap.trim() || d.grupos);
+  const H = headH + 36 + thH + filas.length * rowH + 48;
+  const cv = $("cv-pred"); cv.width = W; cv.height = H;
+  const ctx = cv.getContext("2d");
+  ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, W, H);
+  encabezado(ctx, W, headH, pad, "", "", $("cong").value || "");
+  ctx.fillStyle = "#fff"; ctx.font = `800 76px ${DISPF}`; ctx.fillText("Programa de predicación", pad, 152);
+  if (ps.fecha) {
+    const s = "Semana del " + rangoSemana(ps.fecha, true);
+    ctx.textAlign = "right"; ctx.fillStyle = "#f2b33d"; fit(ctx, s, 600, 38, 700, BODYF); ctx.fillText(s, W - pad, 150); ctx.textAlign = "left";
+  }
+  // Encabezado de la tabla
+  let x = pad, y = headH + 36;
+  const xs = [];
+  PC.forEach(c => { xs.push(x); x += c.w; });
+  PC.forEach((c, i) => {
+    ctx.fillStyle = c.bg; ctx.fillRect(xs[i], y, c.w + 1, thH);
+  });
+  ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  PC.forEach((c, i) => {
+    if (!c.t) return;
+    const w = c.k === "tn" ? c.w + PC[i + 1].w : c.w;
+    ctx.fillStyle = c.fg; fit(ctx, c.t.toUpperCase(), w - 16, 22, 700, BODYF, 14);
+    ctx.fillText(c.t.toUpperCase(), xs[i] + w / 2, y + thH / 2);
+  });
+  y += thH;
+  const y0 = y;
+  const ci = k => PC.findIndex(c => c.k === k);
+  filas.forEach((d, r) => {
+    const ry = y0 + r * rowH;
+    ctx.fillStyle = r % 2 ? "#f4f7f9" : "#fff"; ctx.fillRect(pad, ry, W - pad * 2, rowH);
+    const celda = (k, txt, opts = {}) => {
+      const i = ci(k), w = opts.w || PC[i].w, v = (txt || "").trim();
+      ctx.fillStyle = opts.color || "#17212b";
+      fit(ctx, v, w - 18, opts.size || 26, opts.weight || 500, opts.fam || BODYF, 15);
+      ctx.fillText(v, xs[i] + w / 2, ry + rowH / 2 + 1);
+    };
+    celda("dia", d.dia, { weight: 700 });
+    if (d.grupos) {
+      const i0 = ci("cap"), w = PC.slice(i0, ci("lugar")).reduce((a, c) => a + c.w, 0);
+      const t = "PREDICACIÓN POR GRUPOS".split("").join(String.fromCharCode(8202, 8202));
+      ctx.fillStyle = "#1f5f7a"; fit(ctx, t, w - 30, 26, 700, BODYF, 14); ctx.fillText(t, xs[i0] + w / 2, ry + rowH / 2 + 1);
+    } else {
+      celda("cap", d.cap, { weight: 600 });
+      celda("tn", d.tn); celda("tnom", d.tnom); celda("manz", d.manz);
+    }
+    celda("lugar", d.lugar);
+  });
+  // Hora: junta celdas seguidas con la misma hora
+  const hi = ci("hora");
+  for (let r = 0; r < filas.length;) {
+    let k = r + 1;
+    const h = (filas[r].hora || "").trim();
+    while (h && k < filas.length && (filas[k].hora || "").trim() === h) k++;
+    const top = y0 + r * rowH, alto = (k - r) * rowH;
+    if (k - r > 1) { ctx.fillStyle = "#fff"; ctx.fillRect(xs[hi], top, PC[hi].w, alto); }
+    if (h) {
+      ctx.fillStyle = "#17212b";
+      fit(ctx, h, PC[hi].w - 16, k - r > 1 ? 58 : 32, 800, DISPF, 18);
+      ctx.fillText(h, xs[hi] + PC[hi].w / 2, top + alto / 2 + 2);
+    }
+    filas[r]._span = k - r;
+    r = k;
+  }
+  // Líneas de la tabla
+  ctx.strokeStyle = "#c9d3dc"; ctx.lineWidth = 2;
+  const yEnd = y0 + filas.length * rowH;
+  ctx.strokeRect(pad, y0 - thH, W - pad * 2, yEnd - y0 + thH);
+  for (let r = 1; r < filas.length; r++) {
+    const ry = y0 + r * rowH;
+    // no cruzar la celda de hora combinada
+    let dentro = false, acc = 0;
+    for (let q = 0; q < filas.length; q += filas[q]._span || 1) { if (r > q && r < q + (filas[q]._span || 1)) dentro = true; acc++; }
+    ctx.beginPath();
+    if (dentro) { ctx.moveTo(pad, ry); ctx.lineTo(xs[hi], ry); ctx.moveTo(xs[hi + 1], ry); ctx.lineTo(W - pad, ry); }
+    else { ctx.moveTo(pad, ry); ctx.lineTo(W - pad, ry); }
+    ctx.stroke();
+  }
+  PC.forEach((c, i) => {
+    if (i === 0) return;
+    ctx.beginPath();
+    for (let r = 0; r < filas.length; r++) {
+      const d = filas[r], ry = y0 + r * rowH;
+      const enGrupo = d.grupos && i > ci("cap") && i < ci("lugar");
+      if (!enGrupo) { ctx.moveTo(xs[i], ry); ctx.lineTo(xs[i], ry + rowH); }
+    }
+    if (c.k !== "tnom") { ctx.moveTo(xs[i], y0 - thH); ctx.lineTo(xs[i], y0); }
+    ctx.stroke();
+  });
+  ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
+  $("p-out").src = cv.toDataURL("image/png");
+}
+function pTexto() {
+  const L = ["*Programa de predicación*"];
+  if (ps.fecha) L.push("Semana del " + rangoSemana(ps.fecha, true));
+  L.push("");
+  ps.dias.filter(d => d.dia.trim() || d.cap.trim() || d.grupos).forEach(d => {
+    if (d.grupos) { L.push(`*${d.dia}* ${d.hora || ""} — Predicación por grupos${d.lugar ? " · " + d.lugar : ""}`.replace("  ", " ")); return; }
+    const terr = [d.tn && "Terr. " + d.tn, d.tnom].filter(Boolean).join(" ");
+    L.push(`*${d.dia}* ${d.hora}`, `Capitán: ${d.cap || "Por asignar"}`);
+    if (terr || d.manz) L.push(`Territorio: ${[terr, d.manz && "(" + d.manz + ")"].filter(Boolean).join(" ")}`);
+    if (d.lugar) L.push(`Lugar: ${d.lugar}`);
+    L.push("");
+  });
+  return L.join("\n").trim();
+}
+const pNombre = () => `predicacion-${ps.fecha || "semana"}.png`;
+$("p-share").addEventListener("click", () => { pDibujar(); compartirCanvas($("cv-pred"), pNombre(), pTexto(), $("p-toast")); });
+$("p-download").addEventListener("click", () => { pDibujar(); descargarCanvas($("cv-pred"), pNombre(), $("p-toast")); });
+$("p-copy").addEventListener("click", () => copiarTexto(pTexto(), $("p-toast")));
+
+// ================= Pestañas =================
+function abrir(tab) {
+  ["priv", "vym", "pred"].forEach(t => {
+    $("tab-" + t).hidden = t !== tab;
+    $("tb-" + t).setAttribute("aria-selected", t === tab);
+  });
+  store.set("tab", tab);
+  if (location.hash.slice(1) !== tab && history.replaceState) history.replaceState(null, "", "#" + tab);
+}
+document.querySelectorAll(".tabs button").forEach(b => b.addEventListener("click", () => abrir(b.dataset.tab)));
+$("cong").addEventListener("input", () => { vCambio(); pCambio(); });
+
+// ================= Inicio =================
+{
+  const r = fechaFutura(vs.f.fecha, 4); vs.f.fecha = r.iso;
+  V_CAMPOS.forEach(k => { if (vs.f[k] !== undefined) $("v-" + k).value = vs.f[k]; });
+  $("v-salab").checked = vs.salab;
+  if (r.movida) aviso($("v-toast"), `La fecha guardada ya pasó. La cambié al ${fechaLargaDe(r.iso).toLowerCase()}.`, 9000);
+  const lu = isoLocal(lunesDe(new Date()));
+  if (!ps.fecha || ps.fecha < lu) {
+    const sig = lunesDe(new Date()); if (new Date().getDay() !== 1) sig.setDate(sig.getDate() + 7);
+    ps.fecha = ps.fecha && ps.fecha >= lu ? ps.fecha : isoLocal(sig);
+  }
+  $("p-fecha").value = ps.fecha;
+  vListas(); pLista(); vCargarImg();
+  vGuardar(); store.set("pred-state", ps);
+  const h = location.hash.slice(1);
+  abrir(["priv", "vym", "pred"].includes(h) ? h : store.get("tab", "priv"));
+  vDibujar(); pDibujar();
+  if (document.fonts) Promise.all(['800 92px "Bricolage Grotesque"', '700 31px "Figtree"', '500 26px "Figtree"', '600 31px "Figtree"'].map(x => document.fonts.load(x))).then(() => { vDibujar(); pDibujar(); }, () => {});
+}
 </script>
 </body>
 </html>
