@@ -238,7 +238,7 @@ textarea { font: inherit; color: var(--fg); background: var(--surface); border: 
     </div>
     <div class="grid2">
       <label class="f">Preside (sala A)<input id="v-pres" list="nombres"></label>
-      <label class="f">Consejero sala B<input id="v-cons" list="nombres"></label>
+      <label class="f">Preside (sala B)<input id="v-cons" list="nombres"></label>
     </div>
     <label class="check"><input type="checkbox" id="v-salab" checked> Hay sala B</label>
 
@@ -333,7 +333,7 @@ textarea { font: inherit; color: var(--fg); background: var(--surface); border: 
 <script>
 // Cambia este número en cada actualización. En GitHub Pages, si el teléfono
 // tiene guardada una versión vieja, la página se recarga sola con la nueva.
-const APP_VERSION = "8";
+const APP_VERSION = "9";
 (function buscarVersionNueva() {
   if (!/github\.io$/.test(location.hostname)) return;
   fetch(location.pathname + "?nocache=" + Date.now(), { cache: "no-store" })
@@ -1105,7 +1105,7 @@ function vDibujar() {
   ctx.fillStyle = VC.a; ctx.font = `700 22px ${BODYF}`; ctx.fillText("PRESIDE · SALA A", pad, y);
   ctx.fillStyle = VC.fg; fit(ctx, f.pres || "—", col2 - pad - 20, 38, 600, DISPF); ctx.fillText(f.pres || "—", pad, y + 46);
   if (vs.salab) {
-    ctx.fillStyle = VC.b; ctx.font = `700 22px ${BODYF}`; ctx.fillText("CONSEJERO · SALA B", col2, y);
+    ctx.fillStyle = VC.b; ctx.font = `700 22px ${BODYF}`; ctx.fillText("PRESIDE · SALA B", col2, y);
     ctx.fillStyle = VC.fg; fit(ctx, f.cons || "—", W - pad - col2, 38, 600, DISPF); ctx.fillText(f.cons || "—", col2, y + 46);
   }
   y += 84;
@@ -1192,7 +1192,7 @@ function vTexto() {
   const f = vs.f, L = [`*Vida y Ministerio Cristiano*`];
   const sem = [f.fecha ? "Semana del " + rangoSemana(f.fecha) : "", f.lectura].filter(Boolean).join(" · ");
   if (sem) L.push(sem);
-  L.push(`Preside: ${f.pres || "Por asignar"}` + (vs.salab ? ` | Sala B: ${f.cons || "Por asignar"}` : ""), "");
+  L.push(`Preside sala A: ${f.pres || "Por asignar"}` + (vs.salab ? ` | Preside sala B: ${f.cons || "Por asignar"}` : ""), "");
   for (const it of vPrograma()) {
     if (it.k === "sec") L.push("", `*${it.titulo}*`);
     else if (it.k === "cancion") { L.push(`${hora12(it.h)} Canción${it.n ? " " + it.n : ""}`); if (it.extra) L.push(`${it.extra[0]}: ${it.extra[1] || "Por asignar"}`); }
