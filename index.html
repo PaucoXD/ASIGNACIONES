@@ -214,6 +214,17 @@ function fechaLarga() {
   const s = new Date(y, m - 1, d).toLocaleDateString("es-MX", { weekday: "long", day: "numeric", month: "long" });
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
+function fechaPartes() {
+  const v = $("fecha").value;
+  if (!v) return null;
+  const [y, m, d] = v.split("-").map(Number);
+  const dt = new Date(y, m - 1, d);
+  return {
+    dia: String(d),
+    mes: dt.toLocaleDateString("es-MX", { month: "long" }).toUpperCase(),
+    semana: dt.toLocaleDateString("es-MX", { weekday: "long" }).toUpperCase(),
+  };
+}
 function horaTxt() {
   const v = $("hora").value;
   if (!v) return "";
@@ -225,7 +236,7 @@ function horaTxt() {
 
 // ---------- Dibujo de la imagen ----------
 const W = 1080;
-const C = { bg: "#f4f7f9", head: "#1f5f7a", headDeep: "#163f52", headFg: "#ffffff", soft: "#cfe3ec", label: "#1f5f7a", name: "#17212b", line: "#dbe3e9", muted: "#5a6876", empty: "#a3b0bb" };
+const C = { bg: "#f4f7f9", head: "#1f5f7a", headDeep: "#163f52", headFg: "#ffffff", soft: "#cfe3ec", label: "#1f5f7a", name: "#17212b", line: "#dbe3e9", muted: "#5a6876", empty: "#a3b0bb", date: "#f2b33d", dateFg: "#3a2a05" };
 
 function fitText(ctx, text, maxW, size, weight, family, min = 28) {
   let s = size;
@@ -249,20 +260,48 @@ function draw() {
   g.addColorStop(0, C.head); g.addColorStop(1, C.headDeep);
   ctx.fillStyle = g; ctx.fillRect(0, 0, W, headH);
   ctx.fillStyle = "rgba(255,255,255,.06)";
-  ctx.beginPath(); ctx.arc(W - 40, 40, 230, 0, Math.PI * 2); ctx.fill();
-  ctx.beginPath(); ctx.arc(W - 120, headH + 10, 120, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(-60, headH, 200, 0, Math.PI * 2); ctx.fill();
+
+  // Hoja de calendario con la fecha
+  const tileW = 230, tileH = 250, tileX = W - pad - tileW, tileY = (headH - tileH) / 2;
+  const f = fechaPartes();
+  if (f) {
+    const r = 22;
+    ctx.save();
+    ctx.shadowColor = "rgba(0,0,0,.28)"; ctx.shadowBlur = 30; ctx.shadowOffsetY = 10;
+    ctx.fillStyle = "#ffffff";
+    ctx.beginPath(); ctx.roundRect(tileX, tileY, tileW, tileH, r); ctx.fill();
+    ctx.restore();
+    ctx.save();
+    ctx.beginPath(); ctx.roundRect(tileX, tileY, tileW, tileH, r); ctx.clip();
+    ctx.fillStyle = C.date; ctx.fillRect(tileX, tileY, tileW, 64);
+    ctx.restore();
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    const cx = tileX + tileW / 2;
+    ctx.fillStyle = C.dateFg;
+    fitText(ctx, f.mes, tileW - 30, 32, 700, BODY, 20);
+    ctx.fillText(f.mes, cx, tileY + 34);
+    ctx.fillStyle = C.name;
+    ctx.font = `800 128px ${DISP}`;
+    ctx.fillText(f.dia, cx, tileY + 140);
+    ctx.fillStyle = C.head;
+    fitText(ctx, f.semana, tileW - 30, 32, 700, BODY, 20);
+    ctx.fillText(f.semana, cx, tileY + 216);
+    ctx.textAlign = "left";
+  }
+  const leftW = (f ? tileX - 36 : W - pad) - pad;
 
   ctx.textBaseline = "alphabetic";
   ctx.fillStyle = C.soft;
-  ctx.font = `600 30px ${BODY}`;
-  ctx.fillText(($("cong").value || "").toUpperCase().split("").join(String.fromCharCode(8202)), pad, 92);
+  const cong = ($("cong").value || "").toUpperCase();
+  fitText(ctx, cong, leftW, 30, 600, BODY, 20);
+  ctx.fillText(cong, pad, 92);
   ctx.fillStyle = C.headFg;
-  ctx.font = `800 104px ${DISP}`;
+  fitText(ctx, "Privilegios", leftW, 104, 800, DISP, 60);
   ctx.fillText("Privilegios", pad, 196);
-  ctx.font = `500 36px ${BODY}`;
   ctx.fillStyle = C.soft;
-  const sub = [TITULOS[state.tipo], fechaLarga(), horaTxt()].filter(Boolean).join("  ·  ");
-  fitText(ctx, sub, W - pad * 2, 36, 500, BODY, 24);
+  const sub = [TITULOS[state.tipo], horaTxt()].filter(Boolean).join("  ·  ");
+  fitText(ctx, sub, leftW, 36, 500, BODY, 24);
   ctx.fillText(sub, pad, 262);
 
   // Filas
