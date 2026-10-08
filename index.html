@@ -1028,7 +1028,7 @@ function vEstadoGuia() {
   else if (vs.cargada === vs.semana) el.textContent = "✓ Partes de esta semana llenadas.";
   else if (vData) el.textContent = "Esta semana todavía no está en la Guía descargada. Puedes pegar el programa desde wol.jw.org.";
   else if (vDataListo) el.textContent = "Llena las partes a mano o pégalas desde wol.jw.org.";
-  if (vDataListo && vs.cargada !== vs.semana) $("v-pegar-box").open = true;
+  if (vDataListo) $("v-pegar-box").open = vs.cargada !== vs.semana;
 }
 function vIntentarCargar() {
   const d = vData?.[vs.semana];
@@ -1044,9 +1044,10 @@ function vCambiarSemana() {
   const g = vs.porSemana[nueva], fecha = vs.f.fecha;
   if (g) { vs.f = { ...g.f, fecha }; vs.smm = g.smm; vs.nvc = g.nvc; vs.cargada = g.cargada; }
   else {
-    V_NOMBRES.forEach(k => vs.f[k] = "");
-    vs.smm.forEach(p => { p.a1 = p.a2 = p.b1 = p.b2 = ""; });
-    vs.nvc.forEach(p => { p.a = ""; });
+    // Semana nueva: sin nombres y con las partes básicas hasta que se carguen las reales
+    V_NOMBRES.concat(["dt", "lectura", "c1", "c2", "c3"]).forEach(k => vs.f[k] = "");
+    Object.assign(vs.f, { dm: "10", pm: "10", lm: "4", em: "30" });
+    vs.smm = V_SMM(); vs.nvc = V_NVC();
     vs.cargada = null;
   }
   vs.semana = nueva;
