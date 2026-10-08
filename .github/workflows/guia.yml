@@ -1,14 +1,27 @@
-name: Explorar guía (prueba)
+name: Actualizar Guía de actividades
 on:
+  schedule:
+    - cron: "17 11 * * 1"   # cada lunes
+  workflow_dispatch:
   push:
-    branches: ["claude/**"]
-    paths: ["scripts/explorar-guia.mjs", ".github/workflows/guia.yml"]
+    branches: [main, "claude/**"]
+    paths: ["scripts/guia.mjs", ".github/workflows/guia.yml"]
+permissions:
+  contents: write
 jobs:
-  explorar:
+  actualizar:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
-      - run: node scripts/explorar-guia.mjs 202609
+          node-version: 22
+      - run: node scripts/guia.mjs
+      - name: Guardar cambios
+        run: |
+          git add data/vym.json
+          if git diff --cached --quiet; then echo "Sin cambios"; exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Actualizar partes de la Guía de actividades"
+          git push
