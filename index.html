@@ -70,7 +70,7 @@ button[aria-pressed="true"] { background: var(--accent); color: var(--accent-fg)
 .rows-head { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr) 42px; gap: 6px; font-size: .75rem; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
 .actions { display: flex; gap: 8px; flex-wrap: wrap; }
 .actions button { flex: 1 1 150px; }
-.preview { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 12px); }
+@media (min-width: 821px) { .preview { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 12px); } }
 .preview img { width: 100%; border-radius: 10px; border: 1px solid var(--line); display: block; background: var(--bg); }
 .hint { font-size: .82rem; color: var(--muted); margin: 0; }
 .aviso { margin: 0; padding: 10px 12px; border-radius: 9px; background: var(--warn-bg); color: var(--warn-fg); font-size: .9rem; display: grid; gap: 8px; }
@@ -79,6 +79,24 @@ button[aria-pressed="true"] { background: var(--accent); color: var(--accent-fg)
 .aviso input { width: auto; }
 .aviso.alerta { outline: 2px solid var(--warn-fg); }
 input.falta { border-color: var(--warn-fg); }
+.ult { grid-column: 2 / 4; font-size: .8rem; color: var(--muted); margin-top: -3px; line-height: 1.3; }
+.ult.ojo { color: var(--warn-fg); font-weight: 600; }
+.hist { grid-column: 1 / -1; }
+.hist summary { cursor: pointer; font: 600 .78rem/1 var(--body); text-transform: uppercase; letter-spacing: .08em; color: var(--muted); padding-block: 4px; }
+.hist[open] summary { margin-bottom: 12px; }
+.hist-body { display: grid; gap: 18px; }
+.hist h3 { font: 600 1rem var(--display); margin: 0 0 6px; }
+.tabla { overflow-x: auto; }
+.tabla table { width: 100%; border-collapse: collapse; font-size: .9rem; font-variant-numeric: tabular-nums; }
+.tabla th { text-align: left; font-weight: 600; font-size: .75rem; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; padding: 6px 8px; border-bottom: 1px solid var(--line); }
+.tabla td { padding: 7px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.tabla td.num { text-align: right; }
+.reuniones { display: grid; gap: 8px; list-style: none; margin: 0; padding: 0; }
+.reuniones li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: start; padding: 10px 12px; border: 1px solid var(--line); border-radius: 9px; }
+.reuniones b { display: block; }
+.reuniones small { color: var(--muted); }
+.reuniones .del { padding: 6px 10px; color: var(--danger); background: transparent; font-size: .8rem; }
+.vacio { color: var(--muted); margin: 0; }
 .toast { min-height: 1.2em; font-size: .85rem; color: var(--accent); margin: 0; }
 @media (prefers-reduced-motion: no-preference) { button { transition: filter .15s; } button:hover { filter: brightness(1.08); } }
 </style>
@@ -129,6 +147,25 @@ input.falta { border-color: var(--warn-fg); }
     </div>
     <p class="toast" id="toast" role="status"></p>
     <p class="hint">Si un botón no funciona en tu teléfono, mantén presionada la imagen para guardarla o compartirla.</p>
+  </section>
+
+  <section class="panel hist" aria-label="Historial">
+    <details class="hist" id="hist">
+      <summary id="hist-sum">Historial</summary>
+      <div class="hist-body">
+        <p class="hint">Cada reunión se guarda en este teléfono cuando tocas Compartir, Descargar o Copiar texto. También puedes guardarla con el botón.</p>
+        <div class="actions"><button type="button" id="guardar">Guardar esta reunión en el historial</button></div>
+        <div>
+          <h3>Por hermano</h3>
+          <p class="hint" style="margin-bottom:8px">Primero los que tienen más tiempo sin privilegio.</p>
+          <div class="tabla" id="t-hermanos"></div>
+        </div>
+        <div>
+          <h3>Reuniones guardadas</h3>
+          <ul class="reuniones" id="l-reuniones"></ul>
+        </div>
+      </div>
+    </details>
   </section>
 </div>
 
@@ -198,7 +235,8 @@ function renderRows() {
     row.innerHTML = `
       <input id="p-${i}" list="privs" aria-label="Privilegio ${i + 1}" value="${esc(r[0])}">
       <input id="n-${i}" list="nombres" aria-label="Hermano para ${esc(r[0] || "privilegio")}" placeholder="Nombre" value="${esc(r[1])}">
-      <button type="button" class="del" aria-label="Quitar">✕</button>`;
+      <button type="button" class="del" aria-label="Quitar">✕</button>
+      <small class="ult" id="u-${i}" hidden></small>`;
     row.querySelector(`#p-${i}`).addEventListener("input", e => { state.rows[i][0] = e.target.value; changed(); });
     row.querySelector(`#n-${i}`).addEventListener("input", e => { state.rows[i][1] = e.target.value; changed(); });
     row.querySelector(`#n-${i}`).addEventListener("change", e => rememberName(e.target.value));
@@ -221,8 +259,8 @@ function setTipo(tipo, resetRows) {
   changed();
 }
 
-function fechaLarga() {
-  const v = $("fecha").value;
+function fechaLarga() { return fechaLargaDe($("fecha").value); }
+function fechaLargaDe(v) {
   if (!v) return "";
   const [y, m, d] = v.split("-").map(Number);
   const s = new Date(y, m - 1, d).toLocaleDateString("es-MX", { weekday: "long", day: "numeric", month: "long" });
@@ -351,6 +389,104 @@ function draw() {
   $("out").src = cv.toDataURL("image/png");
 }
 
+// ---------- Historial ----------
+let historial = store.get("priv-hist", []);
+const norm = n => n.trim().toLocaleLowerCase("es").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, " ");
+const esPersona = n => n.trim() && !/^grupo\b/i.test(n.trim());
+function fechaCorta(iso) {
+  const [y, m, d] = iso.split("-").map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString("es-MX", { day: "numeric", month: "short" }).replace(".", "");
+}
+function diasEntre(a, b) {
+  const p = s => { const [y, m, d] = s.split("-").map(Number); return Date.UTC(y, m - 1, d); };
+  return Math.round((p(b) - p(a)) / 86400000);
+}
+function haceTxt(dias) {
+  if (dias === 0) return "el mismo día";
+  if (dias < 7) return `hace ${dias} día${dias === 1 ? "" : "s"}`;
+  const sem = Math.round(dias / 7);
+  if (sem < 9) return `hace ${sem} semana${sem === 1 ? "" : "s"}`;
+  return `hace ${Math.round(dias / 30)} meses`;
+}
+function guardarEnHistorial() {
+  const fecha = $("fecha").value;
+  const rows = state.rows.filter(r => r[0].trim() && r[1].trim()).map(r => [r[0].trim(), r[1].trim()]);
+  if (!fecha || !rows.length) return false;
+  const id = `${fecha}|${state.tipo}`;
+  historial = historial.filter(h => h.id !== id);
+  historial.push({ id, fecha, tipo: state.tipo, rows });
+  historial.sort((a, b) => b.fecha.localeCompare(a.fecha));
+  store.set("priv-hist", historial);
+  pintarHistorial(); pistasFilas();
+  return true;
+}
+// Última asignación de un hermano antes de la fecha de esta reunión
+function ultimaVez(nombre, antesDe) {
+  const k = norm(nombre);
+  for (const h of historial) {
+    if (h.fecha >= antesDe) continue;
+    const r = h.rows.find(r => norm(r[1]) === k);
+    if (r) return { fecha: h.fecha, priv: r[0] };
+  }
+  return null;
+}
+function pistasFilas() {
+  const fecha = $("fecha").value || hoyISO();
+  state.rows.forEach((r, i) => {
+    const el = $(`u-${i}`);
+    if (!el) return;
+    const n = r[1].trim();
+    if (!esPersona(n)) { el.hidden = true; return; }
+    const otros = state.rows.filter((o, j) => j !== i && o[1].trim() && norm(o[1]) === norm(n)).map(o => o[0].trim() || "otro privilegio");
+    const u = ultimaVez(n, fecha);
+    let txt, ojo = false;
+    if (otros.length) { txt = `También tiene: ${otros.join(", ")}`; ojo = true; }
+    else if (u) { const d = diasEntre(u.fecha, fecha); txt = `Última vez: ${u.priv}, ${fechaCorta(u.fecha)} (${haceTxt(d)})`; ojo = d < 7; }
+    else txt = historial.length ? "Sin privilegios en el historial" : "";
+    el.textContent = txt; el.hidden = !txt; el.classList.toggle("ojo", ojo);
+  });
+}
+function pintarHistorial() {
+  $("hist-sum").textContent = `Historial (${historial.length} ${historial.length === 1 ? "reunión" : "reuniones"})`;
+  const lista = $("l-reuniones");
+  if (!historial.length) {
+    lista.innerHTML = "";
+    $("t-hermanos").innerHTML = `<p class="vacio">Todavía no hay reuniones guardadas.</p>`;
+    lista.innerHTML = `<li><span class="vacio">Aparecerán aquí cuando compartas la primera imagen.</span></li>`;
+    return;
+  }
+  // Resumen por hermano
+  const hoy = hoyISO(), por = new Map();
+  for (const h of historial) {
+    const vistos = new Set();
+    for (const [priv, n] of h.rows) {
+      const k = norm(n);
+      if (!esPersona(n) || vistos.has(k)) continue;
+      vistos.add(k);
+      const e = por.get(k) || { nombre: n, ultima: h.fecha, priv, veces: 0 };
+      if (diasEntre(h.fecha, hoy) <= 56) e.veces++;
+      por.set(k, e);
+    }
+  }
+  const filas = [...por.values()].sort((a, b) => a.ultima.localeCompare(b.ultima) || a.nombre.localeCompare(b.nombre, "es"));
+  $("t-hermanos").innerHTML = `<table><thead><tr><th>Hermano</th><th>Última vez</th><th>Privilegio</th><th class="num">Últ. 8 sem.</th></tr></thead><tbody>${
+    filas.map(e => `<tr><td>${esc(e.nombre)}</td><td>${fechaCorta(e.ultima)}</td><td>${esc(e.priv)}</td><td class="num">${e.veces}</td></tr>`).join("")
+  }</tbody></table>`;
+  lista.innerHTML = historial.map((h, i) => `<li><div><b>${esc(fechaLargaDe(h.fecha))}</b><small>${TITULOS[h.tipo]}</small><br><small>${esc(h.rows.map(r => `${r[0]}: ${r[1]}`).join(" · "))}</small></div><button type="button" class="del" data-i="${i}">Borrar</button></li>`).join("");
+}
+// Borrar pide un segundo toque
+$("l-reuniones").addEventListener("click", e => {
+  const b = e.target.closest("button[data-i]");
+  if (!b) return;
+  if (b.dataset.ok !== "1") { b.dataset.ok = "1"; b.textContent = "¿Seguro?"; setTimeout(() => { if (b.isConnected) { b.dataset.ok = ""; b.textContent = "Borrar"; } }, 4000); return; }
+  historial.splice(Number(b.dataset.i), 1);
+  store.set("priv-hist", historial);
+  pintarHistorial(); pistasFilas();
+});
+$("guardar").addEventListener("click", () => {
+  toast(guardarEnHistorial() ? "Reunión guardada en el historial." : "Escribe al menos un nombre y la fecha para guardar.");
+});
+
 function filasVisibles() {
   return state.rows.filter(r => r[0].trim() || r[1].trim()).filter(r => !state.ocultar || r[1].trim());
 }
@@ -378,6 +514,7 @@ let t;
 function changed() {
   store.set("priv-state", state);
   revisarFaltantes();
+  pistasFilas();
   clearTimeout(t); t = setTimeout(draw, 120);
 }
 
@@ -404,6 +541,7 @@ $("share").addEventListener("click", async () => {
     const file = new File([await getBlob()], fileName(), { type: "image/png" });
     if (navigator.canShare && navigator.canShare({ files: [file] })) {
       await navigator.share({ files: [file], text: textoWhatsApp() });
+      guardarEnHistorial();
       toast("Listo para enviar.");
     } else {
       toast("Este navegador no permite compartir. Usa Descargar o mantén presionada la imagen.");
@@ -415,18 +553,19 @@ $("download").addEventListener("click", async () => {
   draw();
   const dl = window.claude?.use ? await window.claude.use("downloads").catch(() => null) : null;
   if (dl) {
-    try { await dl.save({ filename: fileName(), data: await getBlob() }); toast("Imagen guardada."); }
+    try { await dl.save({ filename: fileName(), data: await getBlob() }); guardarEnHistorial(); toast("Imagen guardada."); }
     catch (e) { if (e?.code !== "declined") toast("No se pudo descargar. Mantén presionada la imagen para guardarla."); }
     return;
   }
   const a = document.createElement("a");
   a.href = $("cv").toDataURL("image/png"); a.download = fileName();
   document.body.appendChild(a); a.click(); a.remove();
+  guardarEnHistorial();
   toast("Descarga iniciada. Si no aparece, mantén presionada la imagen.");
 });
 $("copytext").addEventListener("click", async () => {
   if (!puedeSeguir()) return;
-  try { await navigator.clipboard.writeText(textoWhatsApp()); toast("Texto copiado. Pégalo en WhatsApp."); }
+  try { await navigator.clipboard.writeText(textoWhatsApp()); guardarEnHistorial(); toast("Texto copiado. Pégalo en WhatsApp."); }
   catch { toast("No se pudo copiar automáticamente."); }
 });
 $("add").addEventListener("click", () => { state.rows.push(["", ""]); renderRows(); changed(); $(`p-${state.rows.length - 1}`).focus(); });
@@ -449,6 +588,7 @@ if (!$("fecha").value || $("fecha").value < hoyISO()) {
 $("ocultar").checked = !!state.ocultar;
 if (!$("hora").value) $("hora").value = state.tipo === "finde" ? "17:00" : "19:30";
 fillLists();
+pintarHistorial();
 setTipo(state.tipo, false);
 draw();
 if (fechaMovida) toast(`La fecha guardada ya pasó. La cambié a la próxima reunión: ${fechaLarga()}.`, 9000);
