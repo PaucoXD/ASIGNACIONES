@@ -18,6 +18,8 @@
   --accent: #1f5f7a;
   --accent-fg: #ffffff;
   --danger: #a63d3d;
+  --warn-bg: #fdf1d6;
+  --warn-fg: #7a5200;
   --display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
   --body: "Figtree", "Segoe UI", system-ui, sans-serif;
   color-scheme: light;
@@ -25,13 +27,13 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --bg: #11171d; --surface: #1a232c; --fg: #e6ecf1; --muted: #9aa8b5;
-    --line: #2c3945; --accent: #5fa9c7; --accent-fg: #0d1a21; --danger: #e07a7a;
+    --line: #2c3945; --accent: #5fa9c7; --accent-fg: #0d1a21; --danger: #e07a7a; --warn-bg: #3a2e12; --warn-fg: #f2c66b;
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
   --bg: #11171d; --surface: #1a232c; --fg: #e6ecf1; --muted: #9aa8b5;
-  --line: #2c3945; --accent: #5fa9c7; --accent-fg: #0d1a21; --danger: #e07a7a;
+  --line: #2c3945; --accent: #5fa9c7; --accent-fg: #0d1a21; --danger: #e07a7a; --warn-bg: #3a2e12; --warn-fg: #f2c66b;
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
@@ -71,6 +73,12 @@ button[aria-pressed="true"] { background: var(--accent); color: var(--accent-fg)
 .preview { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 12px); }
 .preview img { width: 100%; border-radius: 10px; border: 1px solid var(--line); display: block; background: var(--bg); }
 .hint { font-size: .82rem; color: var(--muted); margin: 0; }
+.aviso { margin: 0; padding: 10px 12px; border-radius: 9px; background: var(--warn-bg); color: var(--warn-fg); font-size: .9rem; display: grid; gap: 8px; }
+.aviso strong { font-weight: 700; }
+.aviso label { display: flex; gap: 8px; align-items: center; font-weight: 500; cursor: pointer; }
+.aviso input { width: auto; }
+.aviso.alerta { outline: 2px solid var(--warn-fg); }
+input.falta { border-color: var(--warn-fg); }
 .toast { min-height: 1.2em; font-size: .85rem; color: var(--accent); margin: 0; }
 @media (prefers-reduced-motion: no-preference) { button { transition: filter .15s; } button:hover { filter: brightness(1.08); } }
 </style>
@@ -114,6 +122,10 @@ button[aria-pressed="true"] { background: var(--accent); color: var(--accent-fg)
       <button type="button" class="primary" id="share">Compartir</button>
       <button type="button" id="download">Descargar</button>
       <button type="button" id="copytext">Copiar texto</button>
+    </div>
+    <div class="aviso" id="aviso" hidden>
+      <span id="aviso-txt"></span>
+      <label><input type="checkbox" id="ocultar"> Quitar de la imagen los privilegios sin nombre</label>
     </div>
     <p class="toast" id="toast" role="status"></p>
     <p class="hint">Si un botón no funciona en tu teléfono, mantén presionada la imagen para guardarla o compartirla.</p>
@@ -161,12 +173,14 @@ if (!state) {
 }
 let nombres = store.get("priv-nombres", ["Tomás Reyes", "Eliezer Gzz", "Roberto Belmares", "Ulises Alonso", "Alfonso Vázquez", "Mateo Luna"]);
 
+function isoLocal(d) { return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; }
+function hoyISO() { return isoLocal(new Date()); }
 function nextMeetingDate(tipo) {
   const d = new Date();
   // Entre semana: jueves; fin de semana: domingo (ajustable en el formulario)
   const target = tipo === "finde" ? 0 : 4;
   while (d.getDay() !== target) d.setDate(d.getDate() + 1);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  return isoLocal(d);
 }
 
 function fillLists() {
@@ -247,9 +261,9 @@ function fitText(ctx, text, maxW, size, weight, family, min = 28) {
 
 function draw() {
   const cv = $("cv"), ctx = cv.getContext("2d");
-  const rows = state.rows.filter(r => r[0].trim() || r[1].trim());
+  const rows = filasVisibles();
   const headH = 330, rowH = 118, footH = 170, pad = 72;
-  const H = Math.max(1080, headH + 40 + rows.length * rowH + footH);
+  const H = Math.max(720, headH + 40 + rows.length * rowH + footH);
   cv.width = W; cv.height = H;
   const DISP = '"Bricolage Grotesque", sans-serif', BODY = '"Figtree", sans-serif';
 
@@ -337,9 +351,33 @@ function draw() {
   $("out").src = cv.toDataURL("image/png");
 }
 
+function filasVisibles() {
+  return state.rows.filter(r => r[0].trim() || r[1].trim()).filter(r => !state.ocultar || r[1].trim());
+}
+function faltantes() { return state.rows.filter(r => r[0].trim() && !r[1].trim()).map(r => r[0].trim()); }
+function revisarFaltantes() {
+  const f = faltantes();
+  $("aviso").hidden = f.length === 0;
+  if (!f.length) $("aviso").classList.remove("alerta");
+  const n = f.length === 1 ? "Falta 1 nombre" : `Faltan ${f.length} nombres`;
+  $("aviso-txt").innerHTML = `<strong>${n}:</strong> ${esc(f.join(", "))}.` + (state.ocultar ? " No saldrán en la imagen." : " Saldrán como \u201cPor asignar\u201d.");
+  state.rows.forEach((r, i) => { const el = $(`n-${i}`); if (el) el.classList.toggle("falta", !!r[0].trim() && !r[1].trim()); });
+}
+// Si faltan nombres, el primer toque solo avisa; el segundo continúa.
+let confirmado = 0;
+function puedeSeguir() {
+  if (!faltantes().length || state.ocultar || Date.now() - confirmado < 8000) return true;
+  confirmado = Date.now();
+  $("aviso").classList.add("alerta");
+  $("aviso").scrollIntoView({ block: "nearest", behavior: "smooth" });
+  toast("Faltan nombres. Toca otra vez para continuar así, o complétalos.");
+  return false;
+}
+
 let t;
 function changed() {
   store.set("priv-state", state);
+  revisarFaltantes();
   clearTimeout(t); t = setTimeout(draw, 120);
 }
 
@@ -348,18 +386,19 @@ function textoWhatsApp() {
   const f = [fechaLarga(), horaTxt()].filter(Boolean).join(", ");
   if (f) lines.push(f);
   lines.push("");
-  state.rows.filter(r => r[0].trim() || r[1].trim()).forEach(r => lines.push(`${r[0].trim()}: ${r[1].trim() || "Por asignar"}`));
+  filasVisibles().forEach(r => lines.push(`${r[0].trim()}: ${r[1].trim() || "Por asignar"}`));
   const msg = $("msg").value.trim();
   if (msg) lines.push("", msg);
   return lines.join("\n");
 }
 
-function toast(s) { $("toast").textContent = s; clearTimeout(toast.t); toast.t = setTimeout(() => $("toast").textContent = "", 3500); }
+function toast(s, ms = 3500) { $("toast").textContent = s; clearTimeout(toast.t); toast.t = setTimeout(() => $("toast").textContent = "", ms); }
 function fileName() { return `privilegios-${$("fecha").value || "reunion"}.png`; }
 
 async function getBlob() { return new Promise(res => $("cv").toBlob(res, "image/png")); }
 
 $("share").addEventListener("click", async () => {
+  if (!puedeSeguir()) return;
   draw();
   try {
     const file = new File([await getBlob()], fileName(), { type: "image/png" });
@@ -372,6 +411,7 @@ $("share").addEventListener("click", async () => {
   } catch (e) { if (e.name !== "AbortError") toast("No se pudo compartir. Mantén presionada la imagen para guardarla."); }
 });
 $("download").addEventListener("click", async () => {
+  if (!puedeSeguir()) return;
   draw();
   const dl = window.claude?.use ? await window.claude.use("downloads").catch(() => null) : null;
   if (dl) {
@@ -385,6 +425,7 @@ $("download").addEventListener("click", async () => {
   toast("Descarga iniciada. Si no aparece, mantén presionada la imagen.");
 });
 $("copytext").addEventListener("click", async () => {
+  if (!puedeSeguir()) return;
   try { await navigator.clipboard.writeText(textoWhatsApp()); toast("Texto copiado. Pégalo en WhatsApp."); }
   catch { toast("No se pudo copiar automáticamente."); }
 });
@@ -395,15 +436,22 @@ $("t-finde").addEventListener("click", () => setTipo("finde", true));
 ["cong", "fecha", "hora", "msg"].forEach(id => $(id).addEventListener("input", () => {
   state[id] = $(id).value; changed();
 }));
+$("ocultar").addEventListener("change", e => { state.ocultar = e.target.checked; changed(); });
 $("form").addEventListener("submit", e => e.preventDefault());
 
 // Inicio
 ["cong", "msg", "fecha", "hora"].forEach(id => { if (state[id]) $(id).value = state[id]; });
-if (!$("fecha").value) $("fecha").value = nextMeetingDate(state.tipo);
+let fechaMovida = false;
+if (!$("fecha").value || $("fecha").value < hoyISO()) {
+  fechaMovida = !!$("fecha").value;
+  $("fecha").value = state.fecha = nextMeetingDate(state.tipo);
+}
+$("ocultar").checked = !!state.ocultar;
 if (!$("hora").value) $("hora").value = state.tipo === "finde" ? "17:00" : "19:30";
 fillLists();
 setTipo(state.tipo, false);
 draw();
+if (fechaMovida) toast(`La fecha guardada ya pasó. La cambié a la próxima reunión: ${fechaLarga()}.`, 9000);
 if (document.fonts) Promise.all([
   '800 104px "Bricolage Grotesque"', '600 46px "Bricolage Grotesque"',
   '500 36px "Figtree"', '600 30px "Figtree"', '700 28px "Figtree"',
