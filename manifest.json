@@ -1,0 +1,14 @@
+{
+  "name": "Programas Cong. Portal",
+  "short_name": "Programas",
+  "description": "Privilegios, Vida y Ministerio y predicación de la Congregación Portal.",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#eef1f4",
+  "theme_color": "#1f5f7a",
+  "lang": "es",
+  "icons": [
+    { "src": "img/icono-180.png", "sizes": "180x180", "type": "image/png" },
+    { "src": "img/icono-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}
