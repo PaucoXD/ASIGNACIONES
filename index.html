@@ -201,6 +201,7 @@ textarea { font: inherit; color: var(--fg); background: var(--surface); border: 
       <button type="button" id="download">Descargar</button>
       <button type="button" id="copytext">Copiar texto</button>
     </div>
+    <label class="check"><input type="checkbox" class="con-texto" id="contexto"> Enviar también el texto con la imagen</label>
     <div class="aviso" id="aviso" hidden>
       <span id="aviso-txt"></span>
       <label><input type="checkbox" id="ocultar"> Quitar de la imagen los privilegios sin nombre</label>
@@ -313,6 +314,7 @@ textarea { font: inherit; color: var(--fg); background: var(--surface); border: 
       <button type="button" id="v-download">Descargar</button>
       <button type="button" id="v-copy">Copiar texto</button>
     </div>
+    <label class="check"><input type="checkbox" class="con-texto" id="v-contexto"> Enviar también el texto con la imagen</label>
     <p class="toast" id="v-toast" role="status"></p>
     <p class="hint">Los horarios se calculan solos con la hora de inicio y los minutos de cada parte. En Seamos mejores maestros se suma 1 minuto de consejo por parte.</p>
   </section>
@@ -339,6 +341,7 @@ textarea { font: inherit; color: var(--fg); background: var(--surface); border: 
       <button type="button" id="p-download">Descargar</button>
       <button type="button" id="p-copy">Copiar texto</button>
     </div>
+    <label class="check"><input type="checkbox" class="con-texto" id="p-contexto"> Enviar también el texto con la imagen</label>
     <p class="toast" id="p-toast" role="status"></p>
     <p class="hint">Si varios días seguidos tienen la misma hora, en la imagen se juntan en una sola celda.</p>
   </section>
@@ -350,7 +353,7 @@ textarea { font: inherit; color: var(--fg); background: var(--surface); border: 
 <script>
 // Cambia este número en cada actualización. En GitHub Pages, si el teléfono
 // tiene guardada una versión vieja, la página se recarga sola con la nueva.
-const APP_VERSION = "10";
+const APP_VERSION = "11";
 (function buscarVersionNueva() {
   if (!/github\.io$/.test(location.hostname)) return;
   fetch(location.pathname + "?nocache=" + Date.now(), { cache: "no-store" })
@@ -711,6 +714,16 @@ function changed() {
   clearTimeout(t); t = setTimeout(draw, 120);
 }
 
+// Opción compartida por las tres pestañas: mandar o no el texto junto con la imagen
+function conTexto() { return !!store.get("con-texto", false); }
+document.querySelectorAll(".con-texto").forEach(c => {
+  c.checked = conTexto();
+  c.addEventListener("change", () => {
+    store.set("con-texto", c.checked);
+    document.querySelectorAll(".con-texto").forEach(o => { o.checked = c.checked; });
+  });
+});
+
 function textoWhatsApp() {
   const lines = [`*Privilegios — ${TITULOS[state.tipo]}*`];
   const f = [fechaLarga(), horaTxt()].filter(Boolean).join(", ");
@@ -733,7 +746,7 @@ $("share").addEventListener("click", async () => {
   try {
     const file = new File([await getBlob()], fileName(), { type: "image/png" });
     if (navigator.canShare && navigator.canShare({ files: [file] })) {
-      await navigator.share({ files: [file], text: textoWhatsApp() });
+      await navigator.share(conTexto() ? { files: [file], text: textoWhatsApp() } : { files: [file] });
       guardarEnHistorial();
       toast("Listo para enviar.");
     } else {
@@ -830,7 +843,7 @@ async function compartirCanvas(cv, nombre, texto, tEl) {
   try {
     const file = new File([await blobDe(cv)], nombre, { type: "image/png" });
     if (navigator.canShare && navigator.canShare({ files: [file] })) {
-      await navigator.share({ files: [file], text: texto });
+      await navigator.share(conTexto() ? { files: [file], text: texto } : { files: [file] });
       aviso(tEl, "Listo para enviar.");
     } else aviso(tEl, "Este navegador no permite compartir. Usa Descargar o mantén presionada la imagen.");
   } catch (e) { if (e.name !== "AbortError") aviso(tEl, "No se pudo compartir. Mantén presionada la imagen para guardarla."); }
